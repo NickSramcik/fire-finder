@@ -19,8 +19,9 @@ module.exports = {
   },
   getFires: async (req, res) => {
     try {
-      const fires = await Fire.find().sort({ createdAt: "desc" }).lean();
-      console.log(fires)
+      let fires = await Fire.find().sort({ createdAt: "desc" }).lean();
+      console.log(fires);
+      res.json(fires);
     } catch (err) {
       console.log(err);
     }
