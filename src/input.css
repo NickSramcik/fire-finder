@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+#map{
+    height:400px;
+    width: 80%;
+    flex: auto;
+    
+  }
+
+#map *{
+    border-radius: 0.5rem;
+}

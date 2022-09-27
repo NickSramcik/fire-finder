@@ -1,3 +1,5 @@
+document.getElementById('getFires').addEventListener('click', getFires);
+
 function initMap() {
     // Map Options
     var options = {
@@ -45,3 +47,17 @@ function initMap() {
       content: '<h1>San Francisco</h1>'
     });
   } 
+
+  async function getFires() {
+    console.log('Getting Fires')
+    try {
+        const response = await fetch('/fire/getFires', {
+            method: 'get',
+            headers: {'Content-Type': 'application/json'},
+        })
+        const data = await response.json()
+        console.log(data)
+    } catch(err) {
+        console.log(err)
+    }
+}

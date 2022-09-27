@@ -9,6 +9,7 @@ const flash = require("express-flash");
 const logger = require("morgan");
 const connectDB = require("./config/database");
 const mainRoutes = require("./routes/main");
+const fireRoutes = require("./routes/fires")
 
 
 //Use .env file in config folder
@@ -55,6 +56,7 @@ app.use(flash());
 
 //Setup Routes For Which The Server Is Listening
 app.use("/", mainRoutes);
+app.use("/fire", fireRoutes);
 
 //Tailwind
 app.use(express.static('node_modules/tw-elements/dist/js'));

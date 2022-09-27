@@ -3,6 +3,7 @@ module.exports = {
   content: [
     "./views/*.ejs",
     "./public/**/*.{html,js}",
+    "./src/*.{html,js}",
     // "./node_modules/tw-elements/dist/js/**/*.min.js"
   ],
   theme: {

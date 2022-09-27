@@ -12,30 +12,42 @@
 
 </head>
 <body>
-  <h1 class="text-3xl font-bold underline">
-    Hello world!
-  </h1>  
-
   <div class="hero min-h-screen bg-base-200">
-    <div class="hero-content text-center">
-      <div class="max-w-md">
-        <h1 class="text-5xl font-bold">Hello there</h1>
+    <div class="hero-content flex-col lg:flex-row-reverse">
+      <div id="map" class="max-w-lg rounded-lg shadow-2xl"></div>
+      <div>
+        <h1 class="text-5xl font-bold min-w-max">Fire Finder</h1>
         <p class="py-6">Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem quasi. In deleniti eaque aut repudiandae et a id nisi.</p>
-        <button class="btn btn-primary">Get Started</button>
+        
+        <div class="my-5">
+          <h2 class="text-2xl font-bold min-w-max mb-2">Add a Fire</h2>
+          <form action="/fire/createFire" enctype="multipart/form-data" method="POST">
+            <div class="mb-3">
+              <input type="text" placeholder="Incident Name" class="input input-bordered w-full max-w-xs" id="fireName" name="fireName">            
+            </div>
+            <div class="mb-3">
+              <input type="text" placeholder="Latitude" class="input input-bordered w-full max-w-xs" id="latitude" name="latitude">
+            </div>
+            <div class="mb-3">
+              <input type="text" placeholder="Longitude" class="input input-bordered w-full max-w-xs" id="longitude" name="longitude">
+            </div>
+            <button type="submit" class="btn btn-primary" value="Upload">Submit</button>
+          </form>
+          <button id="getFires" class="btn btn-primary" value="Upload">Get Fires</button>
+        </div>
       </div>
     </div>
   </div>
   
   <!-- <div class="container flex align-center justify-center mx-auto">
     <h3>My Google Maps Demo</h3>
-    <div id="map" class="justify-center align-center"></div>
+    <div id="map" class="center"></div>
   </div> -->
   
   <script src="/js/index.js"></script>
 
   <script
-    src="removed for security reasons
-    "
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEP4Fpje8rlC-Z1aTMRMCuQ9FcEpXQMrU&callback=initMap"
     defer
   ></script>
 </body>
