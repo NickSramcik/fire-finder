@@ -1,5 +1,5 @@
 const cloudinary = require("../middleware/cloudinary");
-const Fire = require("../models/fire");
+const Fire = require("../models/Fire");
 
 module.exports = {
   createFire: async (req, res) => {
