@@ -10,6 +10,8 @@ const logger = require("morgan");
 const connectDB = require("./config/database");
 const mainRoutes = require("./routes/main");
 const fireRoutes = require("./routes/fires")
+const cors = require('cors')
+app.use(cors())
 
 
 //Use .env file in config folder
