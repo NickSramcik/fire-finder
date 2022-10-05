@@ -2,9 +2,9 @@
 
 This project's purpose is to make wildfire information more accessible for the average, non-tech-savy person. There are many places to get this information, but they are difficult to find, use, and/or navigate even for experts in the field. Fire Finder is designed to be simple and easy to use for everyone. 
 
-**Link to project:** (Site host pending) 
+**Link to project:** https://fire-finder.herokuapp.com/ 
 
-![Website preview](https://i.imgur.com/TOXZoPq.jpg)
+![Website preview](https://i.imgur.com/qXfJbQE.jpg)
 
 ## How It's Made:
 
