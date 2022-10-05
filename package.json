@@ -6,7 +6,8 @@
   "scripts": {
     "start": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build-css": "tailwindcss build -i ./src/input.css -o ./public/css/styles.css"
+    "build-css": "tailwindcss build -i ./src/input.css -o ./public/css/styles.css",
+    "watch-css": "tailwindcss -w ./src/input.css -o ./public/css/styles.css"
   },
   "author": "",
   "license": "MIT",
