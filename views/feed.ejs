@@ -1,48 +1,83 @@
 <%- include('partials/header') -%>
 
-<div class="overflow-x-auto">
+<!-- Heading -->
+<div class="hero bg-base-200 mb-12">
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <h1 class="text-5xl font-bold">Fire Feed</h1>
+    </div>
+  </div>
+</div>
+
+<!-- Feed Table -->
+<div class="overflow-x-auto mb-16">
   <table class="table table-compact w-full">
     <thead>
       <tr>
         <th></th> 
         <th>Name</th> 
-        <th>Job</th> 
-        <th>company</th> 
-        <th>location</th> 
-        <th>Last Login</th> 
-        <th>Favorite Color</th>
+        <th>Latitude</th> 
+        <th>Longitude</th> 
+        <th>Date Added</th> 
+        <!-- <th>Added By</th>  -->
+        <!-- <th>% Contained</th> -->
       </tr>
     </thead> 
     <tbody>
-      <tr>
-        <th>1</th> 
-        <td>Cy Ganderton</td> 
-        <td>Quality Control Specialist</td> 
-        <td>Littel, Schaden and Vandervort</td> 
-        <td>Canada</td> 
-        <td>12/16/2020</td> 
-        <td>Blue</td>
-      </tr>
-      <tr>
-        <th>2</th> 
-        <td>Hart Hagerty</td> 
-        <td>Desktop Support Technician</td> 
-        <td>Zemlak, Daniel and Leannon</td> 
-        <td>United States</td> 
-        <td>12/5/2020</td> 
-        <td>Purple</td>
-      </tr>
+      <% for(var i=0; i<fires.length; i++) {%>
+        <tr>
+          <th><%= i + 1 %></th>
+          <td><%= fires[i].fireName %></td>
+          <td><%= fires[i].latitude %></td>
+          <td><%= fires[i].longitude %></td>
+          <td><%= fires[i].createdAt %></td>
+        </tr>
+      <% } %>
     </tbody> 
     <tfoot>
       <tr>
         <th></th> 
         <th>Name</th> 
-        <th>Job</th> 
-        <th>company</th> 
-        <th>location</th> 
-        <th>Last Login</th> 
-        <th>Favorite Color</th>
+        <th>Latitude</th> 
+        <th>Longitude</th> 
+        <th>Date Added</th> 
+        <!-- <th>Added By</th>  -->
+        <!-- <th>% Contained</th> -->
       </tr>
+    </tfoot>
+  </table>
+</div>
+ 
+<!-- Add Fire Form -->
+<!-- <div class="hero bg-base-200 mb-12">
+  <div class="hero-content text-center">
+      <div class="my-5">
+        <h2 class="text-2xl font-bold min-w-max mb-1">Add a Fire</h2>
+        <form action="/fire/createFire" enctype="multipart/form-data" method="POST">
+          <div>
+            <label class="label">
+              <span class="label-text">Incident Name</span>
+            </label>
+            <input type="text" placeholder="Monument Fire" class="input input-bordered w-full max-w-xs" id="fireName" name="fireName">            
+          </div>
+          <div>
+            <label class="label">
+              <span class="label-text">Latitude</span>
+            </label>
+            <input type="text" placeholder="41.819" class="input input-bordered w-full max-w-xs" id="latitude" name="latitude">
+          </div>
+          <div class="mb-3">
+            <label class="label">
+              <span class="label-text">Longitude</span>
+            </label>
+            <input type="text" placeholder="-122.895" class="input input-bordered w-full max-w-xs" id="longitude" name="longitude">
+          </div>
+          <button type="submit" class="btn btn-primary" value="Upload">Submit</button>
+        </form>
+      </div>
+  </div>
+</div> -->
+
 
 <%- include('partials/footer') -%>
 

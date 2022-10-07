@@ -31,7 +31,8 @@ module.exports = {
   getFeed: async (req, res) => {
     console.log('Getting feed')
     try {
-      const posts = await Fire.find().sort({ createdAt: "desc" }).lean();
+      const fires = await Fire.find().sort({ createdAt: "desc" }).lean();
+      console.log('Fire data:', fires)
       res.render("feed.ejs", { fires: fires });
     } catch (err) {
       console.log(err);
