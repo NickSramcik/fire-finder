@@ -2,6 +2,7 @@ const cloudinary = require("../middleware/cloudinary");
 const Fire = require("../models/Fire");
 
 module.exports = {
+  // Fire post creation and retrieval
   createFire: async (req, res) => {
     try {
       await Fire.create({
@@ -22,6 +23,16 @@ module.exports = {
       let fires = await Fire.find().sort({ createdAt: "desc" }).lean();
       console.log(fires);
       res.json(fires);
+    } catch (err) {
+      console.log(err);
+    }
+  },
+  // Fire Feed
+  getFeed: async (req, res) => {
+    console.log('Getting feed')
+    try {
+      const posts = await Fire.find().sort({ createdAt: "desc" }).lean();
+      res.render("feed.ejs", { fires: fires });
     } catch (err) {
       console.log(err);
     }
