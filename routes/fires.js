@@ -5,13 +5,15 @@ const firesController = require("../controllers/fires");
 
 // const { ensureAuth, ensureGuest } = require("../middleware/auth");
 
-// Post Routes - simplified for now
+// Fire Routes - simplified for now
 router.get("/getFires", firesController.getFires);
+router.get("/getGeoJson", firesController.getGeoJson);
 router.post("/createFire", upload.single("file"), firesController.createFire);
 
 // Feed Routes
 // router.get("/feed", ensureAuth, firesController.getFeed);
 router.get("/feed", firesController.getFeed);
+router.post("/addGeoJson", upload.single("file"), firesController.addGeoJson);
 
 
 // router.delete("/deletePost/:id", firesController.deleteFire);

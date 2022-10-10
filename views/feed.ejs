@@ -78,6 +78,29 @@
   </div>
 </div> -->
 
+<!-- Add GeoJSON Data-->
+<div class="hero bg-base-200 mb-12">
+  <div class="hero-content text-center">
+      <div class="my-5">
+        <h2 class="text-2xl font-bold min-w-max mb-1">Add GeoJson Data</h2>
+        <form action="/fire/addGeoJson" enctype="multipart/form-data" method="POST">
+          <div>
+            <label class="label">
+              <span class="label-text">Data Name</span>
+            </label>
+            <input type="text" placeholder="NASA IR" class="input input-bordered w-full max-w-xs" id="dataName" name="dataName">            
+          </div>
+          <div>
+            <label class="label">
+              <span class="label-text">GeoJson Data</span>
+            </label>
+            <input type="text" placeholder="{'type':'Feature','geometry':{'type':'Polygon'..." class="input input-bordered w-full max-w-xs mb-2" id="geoJsonData" name="geoJsonData">
+          </div>
+          <button type="submit" class="btn btn-primary" value="Upload">Submit</button>
+        </form>
+      </div>
+  </div>
+</div>
 
 <%- include('partials/footer') -%>
 
