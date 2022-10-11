@@ -1539,10 +1539,6 @@ html {
   margin-bottom: 0.5rem;
 }
 
-.mr-4 {
-  margin-right: 1rem;
-}
-
 .mr-5 {
   margin-right: 1.25rem;
 }
@@ -1610,14 +1606,6 @@ html {
 
 .justify-center {
   justify-content: center;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.justify-around {
-  justify-content: space-around;
 }
 
 .gap-4 {
@@ -1742,7 +1730,8 @@ html {
 
 @media screen and (max-width: 500px) {
   #map{
-    min-width: 94%;
+    min-width: 98%;
+    margin-right: 0;
   }
 }
 
