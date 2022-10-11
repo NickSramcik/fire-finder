@@ -1,7 +1,7 @@
 {
-  "name": "binary-upload-boom",
+  "name": "fire-finder",
   "version": "1.0.0",
-  "description": "100Devs Social Network",
+  "description": "Fire Finder",
   "main": "server.js",
   "scripts": {
     "start": "nodemon server.js",
@@ -21,6 +21,7 @@
     "express": "^4.17.1",
     "express-flash": "^0.0.2",
     "express-session": "^1.17.1",
+    "kmz-geojson": "^0.1.0",
     "method-override": "^3.0.0",
     "mongodb": "^3.6.5",
     "mongoose": "^5.12.3",
@@ -34,5 +35,8 @@
   },
   "devDependencies": {
     "tailwindcss": "^3.1.8"
+  },
+  "overrides": {
+    "graceful-fs": "^4.2.10"
   }
 }
