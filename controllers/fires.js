@@ -71,4 +71,13 @@ module.exports = {
       console.log(err);
     }
   },
+  getFirePage: async (req, res) => {
+    try {
+      const fire = await Fire.findById(req.params.id);
+      // const comments = await Comment.find({ parentPost: req.params.id }).sort({ createdAt: "desc" }).lean();
+      res.render("fire.ejs", { fire: fire, });
+    } catch (err) {
+      console.log(err);
+    }
+  },
 };

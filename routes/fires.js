@@ -9,6 +9,8 @@ const firesController = require("../controllers/fires");
 router.get("/getFires", firesController.getFires);
 router.get("/getGeoJson", firesController.getGeoJson);
 router.post("/createFire", upload.single("file"), firesController.createFire);
+router.get("/details/:id", firesController.getFirePage);
+
 
 // Feed Routes
 // router.get("/feed", ensureAuth, firesController.getFeed);

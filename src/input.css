@@ -4,11 +4,27 @@
 
 #map{
     height:400px;
-    width: 80%;
+    min-width: 450px;
     flex: auto;
-    
+    margin-right: 25px;
   }
+
+@media screen and (max-width: 500px) {
+  #map{
+    min-width: 94%;
+  }
+}
 
 #map div{
     border-radius: 0.5rem;
+}
+
+/* Remove close button on map info windows */
+.gm-ui-hover-effect {
+  display: none !important;
+}
+
+/* Map info window style */
+.gm-style-iw-a {
+  opacity: 0.8;
 }

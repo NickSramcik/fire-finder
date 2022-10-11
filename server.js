@@ -10,6 +10,9 @@ const logger = require("morgan");
 const connectDB = require("./config/database");
 const mainRoutes = require("./routes/main");
 const fireRoutes = require("./routes/fires");
+// const KMZGeoJSON = require('kmz-geojson');
+const cron = require('node-cron');
+
 
 //Use .env file in config folder
 require("dotenv").config({ path: "./config/.env" });
@@ -65,3 +68,8 @@ app.use(express.static('node_modules/tw-elements/dist/js'));
 app.listen(process.env.PORT, () => {
   console.log("Server is running, you better catch it!");
 });
+
+// NASA IR Data Scrnpmaper
+// cron.schedule('* * * * *', () => {
+//   console.log('running a task every minute');
+// });

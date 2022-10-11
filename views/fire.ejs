@@ -1,0 +1,55 @@
+<%- include('partials/header') -%>
+
+  <div class="hero min-h-screen bg-base-200 text-secondary">
+    <div class="hero-content flex-col lg:flex-row-reverse">
+      <div id="map" class="max-w-lg rounded-lg shadow-2xl text-base-100"></div>
+      <div class="mr-5">
+        <h1 class="text-5xl font-bold max-w-lg mb-3"><%= fire.fireName %></h1>
+        <span class="fireLatitude hidden"><%= fire.latitude %></span>
+        <span class="fireLongitude hidden"><%= fire.longitude %></span>
+        <div class="overflow-x-auto mb-16">
+          <table class="table table-compact w-full">
+            <thead>
+            </thead> 
+            <tbody>
+                <tr>
+                  <td>Latitude: </td>
+                  <td><%= fire.latitude %></td>
+                </tr>
+                <tr>
+                  <td>Latitude: </td>
+                  <td><%= fire.longitude %></td>
+                </tr>
+                <tr>
+                  <td>Date Added: </td>
+                  <!-- Trim the createdAt data to just the day, month, and year -->
+                  <td><%= fire.createdAt.toString().split(' ').slice(0,4).join(' ') %></td>
+                </tr>
+                <tr>
+                  <td>More fire information coming soon...</td>
+                </tr>
+            </tbody> 
+            <tfoot>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<%- include('partials/footer') -%>
+
+</body>
+</html>
+  
+  <!-- <div class="container flex align-center justify-center mx-auto">
+    <h3>My Google Maps Demo</h3>
+    <div id="map" class="center"></div>
+  </div> -->
+  
+  <script src="/js/fire.js"></script>
+
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEP4Fpje8rlC-Z1aTMRMCuQ9FcEpXQMrU&callback=initMap"
+    defer
+  ></script>

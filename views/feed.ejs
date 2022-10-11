@@ -27,7 +27,7 @@
       <% for(var i=0; i<fires.length; i++) {%>
         <tr>
           <th><%= i + 1 %></th>
-          <td><%= fires[i].fireName %></td>
+          <td><a class="no-underline" href="/fire/details/<%= fires[i]._id %>"><%= fires[i].fireName %></a></td>
           <td><%= fires[i].latitude %></td>
           <td><%= fires[i].longitude %></td>
           <td><%= fires[i].createdAt %></td>

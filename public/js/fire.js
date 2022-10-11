@@ -8,6 +8,13 @@ const fireIcon = {
   scale: 0.8,
 };
 
+const fireLocation = {
+  latitude: Number(document.querySelector('.fireLatitude').innerText),
+  longitude: Number(document.querySelector('.fireLongitude').innerText),
+}
+
+console.log('Fire Location:', fireLocation.latitude, fireLocation.longitude)
+
 async function getGeoJson() {
   console.log('Getting GeoJson Data')
   try {
@@ -40,8 +47,8 @@ async function getFires() {
 function initMap() {
     // Map Options
     var options = {
-      zoom: 5,
-      center: {lat: 37.7749, lng: -122.4194}
+      zoom: 10,
+      center: {lat: fireLocation.latitude, lng: fireLocation.longitude}
     };
 
     function renderGeoJson(geojson) {
