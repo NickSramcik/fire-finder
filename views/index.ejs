@@ -5,10 +5,10 @@
       <div id="map" class="max-w-lg rounded-lg shadow-2xl text-base-100"></div>
       <div>
         <h1 class="text-5xl font-bold min-w-lg mb-3">Fire Finder</h1>
-        <p class="py-3">Your one-stop location to find wildfires in your area. Submit the coordinates for incidents, and they will display on the map.</p>
-        <p class="pb-3">Red dots represent hotspots from NASA's infrared data, which is updated every 24 hours.</p>
-        
-        <div class="my-5">
+        <p class="py-3">Your one-stop location to find wildfires in your area.</p>
+        <p class="pb-3">Each triangle represents a fire. They are color coded according to containment percentage, and sized according to how many acres they've burned. Click one for more information!</p>
+        <p class="pb-3">Fire perimeters are drawn in red. Red dots represent hotspots found by NASA's infrared monitoring system.</p>
+        <!-- <div class="my-5">
           <h2 class="text-2xl font-bold min-w-max mb-1">Add a Fire</h2>
           <form action="/fire/createFire" enctype="multipart/form-data" method="POST">
             <div>
@@ -30,11 +30,31 @@
               <input type="text" placeholder="-122.895" class="input input-bordered w-full max-w-xs" id="longitude" name="longitude">
             </div>
             <button type="submit" class="btn btn-primary" value="Upload">Submit</button>
-          </form>
+          </form> -->
         </div>
       </div>
     </div>
   </div>
+  <table class="table table-compact w-full">
+    <thead>
+    </thead> 
+    <tbody>
+        <tr>
+          <td><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current text-red-800"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z"></path></svg></td>
+          <td>&lt 10% containment</td>
+          <td><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current text-orange-500"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z"></path></svg></td>
+          <td>10-50% containment</td>
+          <td><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current text-yellow-400"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z"></path></svg></td>
+          <td>50-90% containment</td>
+          <td><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current text-green-600"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z"></path></svg></td>
+          <td>&gt 90% containment</td>
+          <td><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current text-black"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z"></path></svg></td>
+          <td>100% containment</td>
+        </tr>
+    </tbody> 
+    <tfoot>
+    </tfoot>
+  </table>
 
 <%- include('partials/footer') -%>
 

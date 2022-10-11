@@ -13,20 +13,54 @@
             </thead> 
             <tbody>
                 <tr>
-                  <td>Latitude: </td>
-                  <td><%= fire.latitude %></td>
+                  <td>Acres Burned: </td>
+                  <!-- If fire size is known, display it. Replace with unknown if value is null -->
+                  <% if (fire.fireSize) { %>
+                    <!-- Add commas to fire size number -->
+                    <td><%= fire.fireSize.toLocaleString("en-US") %></td>
+                  <% } %>
+                  <% if (!fire.fireSize) { %>
+                    <td>Unknown</td>
+                  <% } %>
                 </tr>
                 <tr>
-                  <td>Latitude: </td>
-                  <td><%= fire.longitude %></td>
+                  <td>Percent Contained: </td>
+                  <!-- If percent contained is known, display it. Replace with unknown if value is null -->
+                  <% if (fire.percentContained) { %>
+                    <td><%= fire.percentContained %>%</td>
+                  <% } %>
+                  <% if (!fire.percentContained) { %>
+                    <td>Unknown</td>
+                  <% } %>
                 </tr>
                 <tr>
-                  <td>Date Added: </td>
+                  <td>Current Fire Behavior: </td>
+                  <td><%= fire.fireBehavior %></td>
+                </tr>
+                <tr>
+                  <td>Cause of Fire: </td>
+                  <!-- If fire cause is known, display it. Replace with unknown if value is null -->
+                  <% if (fire.fireCause) { %>
+                    <td><%= fire.fireCause %></td>
+                  <% } %>
+                  <% if (!fire.fireCause) { %>
+                    <td>Unknown</td>
+                  <% } %>
+                </tr>
+                <tr>
+                  <td>Lat/Long: </td>
+                  <!-- Combine both latitude & longitude, truncate extra decimals -->
+                  <td><%= fire.latitude.toString().slice(0, 6) %>, <%= fire.longitude.toString().slice(0, 8) %></td>
+                </tr>
+                <tr>
+                  <td>Date Discovered: </td>
+                  <!-- Trim off the time, leaving only the date -->
+                  <td><%= fire.discoveryDate.slice(0,10) %></td>
+                </tr>
+                <tr>
+                  <td>Last Updated: </td>
                   <!-- Trim the createdAt data to just the day, month, and year -->
                   <td><%= fire.createdAt.toString().split(' ').slice(0,4).join(' ') %></td>
-                </tr>
-                <tr>
-                  <td>More fire information coming soon...</td>
                 </tr>
             </tbody> 
             <tfoot>

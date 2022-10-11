@@ -16,21 +16,46 @@
       <tr>
         <th></th> 
         <th>Name</th> 
-        <th>Latitude</th> 
-        <th>Longitude</th> 
-        <th>Date Added</th> 
+        <th>Acres Burned</th> 
+        <th>% Contained</th> 
+        <th>Cause</th> 
+        <th>Discovered</th>
+        <th>Lat/Long</th>
         <!-- <th>Added By</th>  -->
-        <!-- <th>% Contained</th> -->
       </tr>
     </thead> 
     <tbody>
       <% for(var i=0; i<fires.length; i++) {%>
         <tr>
           <th><%= i + 1 %></th>
+          <!-- Link fire name to its personal fire page with more details -->
           <td><a class="no-underline" href="/fire/details/<%= fires[i]._id %>"><%= fires[i].fireName %></a></td>
-          <td><%= fires[i].latitude %></td>
-          <td><%= fires[i].longitude %></td>
-          <td><%= fires[i].createdAt %></td>
+          <!-- If fire size is known, display it. Replace with unknown if value is null -->
+          <% if (fires[i].fireSize) { %>
+            <!-- Add commas to fire size number -->
+            <td><%= fires[i].fireSize.toLocaleString("en-US") %></td>
+          <% } %>
+          <% if (!fires[i].fireSize) { %>
+            <td>Unknown</td>
+          <% } %>
+          <!-- If percent contained is known, display it. Replace with unknown if value is null -->
+          <% if (fires[i].percentContained) { %>
+            <td><%= fires[i].percentContained %>%</td>
+          <% } %>
+          <% if (!fires[i].percentContained) { %>
+            <td>Unknown</td>
+          <% } %>
+          <!-- If fire cause is known, display it. Replace with unknown if value is null -->
+          <% if (fires[i].fireCause) { %>
+            <td><%= fires[i].fireCause %></td>
+          <% } %>
+          <% if (!fires[i].fireCause) { %>
+            <td>Unknown</td>
+          <% } %>
+          <!-- Trim off the time, leaving only the date -->
+          <td><%= fires[i].discoveryDate.slice(0,10) %></td>
+          <!-- Combine both latitude & longitude, truncate extra decimals -->
+          <td><%= fires[i].latitude.toString().slice(0, 6) %>, <%= fires[i].longitude.toString().slice(0, 8) %></td>
         </tr>
       <% } %>
     </tbody> 
@@ -38,11 +63,12 @@
       <tr>
         <th></th> 
         <th>Name</th> 
-        <th>Latitude</th> 
-        <th>Longitude</th> 
-        <th>Date Added</th> 
+        <th>Acres Burned</th> 
+        <th>% Contained</th> 
+        <th>Cause</th> 
+        <th>Discovered</th>
+        <th>Lat/Long</th>
         <!-- <th>Added By</th>  -->
-        <!-- <th>% Contained</th> -->
       </tr>
     </tfoot>
   </table>

@@ -13,6 +13,26 @@ const FireSchema = new mongoose.Schema({
     type: String,
     require: true,
   },
+  fireSize: {
+    type: Number,
+    require: false,
+  },
+  fireBehavior: {
+    type: String,
+    require: false,
+  },
+  fireCause: {
+    type: String,
+    require: false,
+  },
+  discoveryDate: {
+    type: String,
+    require: false,
+  },
+  percentContained: {
+    type: String,
+    require: false,
+  },
   // user: {
   //   type: mongoose.Schema.Types.ObjectId,
   //   ref: "User",
