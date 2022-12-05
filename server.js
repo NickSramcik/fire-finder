@@ -21,8 +21,22 @@ require("dotenv").config({ path: "./config/.env" });
 // Passport config
 require("./config/passport")(passport);
 
-//Connect To Database
-connectDB();
+// //Connect To Database
+// connectDB();
+
+// Connect asyncronously for Cyclic's serverless architecture
+const dbS = connectDB().then(() => {
+
+
+  client.connect(async err => {
+    //Connect To Database
+    if(err){ console.error(err); return false;}
+    // connection to mongo is successful, listen for requests
+    app.listen(3000, () => {
+      console.log("listening for requests");
+    })
+  });
+  })
 
 //Using EJS for views
 app.set("view engine", "ejs");
@@ -66,9 +80,9 @@ app.use(express.static('node_modules/tw-elements/dist/js'));
 
 
 //Server Running
-app.listen(process.env.PORT, () => {
-  console.log("Server is running, you better catch it!");
-});
+// app.listen(process.env.PORT, () => {
+//   console.log("Server is running, you better catch it!");
+// });
 
 // Refresh NASA IR data every 6 hours
 cron.schedule('0 */6 * * *', () => {
