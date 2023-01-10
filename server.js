@@ -27,7 +27,7 @@ require("./config/passport")(passport);
 // Connect asyncronously for Cyclic's serverless architecture
 const { MongoClient } = require('mongodb');
 const uri = process.env.DB_STRING;
-const client = new MongoClient(uri);
+const client = new MongoClient(uri, {useUnifiedTopology: true});
 const dbS = connectDB().then(() => {
   client.connect(async err => {
     //Connect To Database
