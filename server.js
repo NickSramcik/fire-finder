@@ -85,7 +85,8 @@ app.use(express.static('node_modules/tw-elements/dist/js'));
 //   console.log("Server is running, you better catch it!");
 // });
 
-// Refresh NASA IR data every 6 hours
-// cron.schedule('0 */6 * * *', () => {
-//   dataScraper.refreshNasaIR();
-// });
+// This section is needed for running fire finder on unix environments!
+  // Refresh NASA IR data every 6 hours
+  // cron.schedule('0 */6 * * *', () => {
+  //   dataScraper.refreshNasaIR();
+  // });
