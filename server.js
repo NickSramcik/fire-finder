@@ -80,12 +80,12 @@ app.use("/fire", fireRoutes);
 app.use(express.static('node_modules/tw-elements/dist/js'));
 
 
-//Server Running
+// // Server Running
 // app.listen(process.env.PORT, () => {
 //   console.log("Server is running, you better catch it!");
 // });
 
 // Refresh NASA IR data every 6 hours
-cron.schedule('0 */6 * * *', () => {
-  dataScraper.refreshNasaIR();
-});
+// cron.schedule('0 */6 * * *', () => {
+//   dataScraper.refreshNasaIR();
+// });
