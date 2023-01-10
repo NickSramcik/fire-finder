@@ -1,5 +1,5 @@
 const KMZGeoJSON = require('kmz-geojson');
-const GeoJson = require("./models/GeoJson");
+const GeoJson = require("../models/GeoJson");
 const KMZUrl = 'https://firms.modaps.eosdis.nasa.gov/api/kml_fire_footprints/usa_contiguous_and_hawaii/24h/suomi-npp-viirs-c2/FirespotArea_usa_contiguous_and_hawaii_suomi-npp-viirs-c2_24h.kmz';
 
 async function deleteGeoJson(geoJsonName) {
