@@ -53,7 +53,7 @@
             <td>Unknown</td>
           <% } %>
           <!-- Trim off the time, leaving only the date -->
-          <td><%= fires[i].discoveryDate.slice(0,10) %></td>
+          <td><%= fires[i].discoveryDate.slice(0,15) %></td>
           <!-- Combine both latitude & longitude, truncate extra decimals -->
           <td><%= fires[i].latitude.toString().slice(0, 6) %>, <%= fires[i].longitude.toString().slice(0, 8) %></td>
         </tr>
