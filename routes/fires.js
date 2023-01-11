@@ -3,6 +3,7 @@ const router = express.Router();
 const upload = require("../middleware/multer");
 const firesController = require("../controllers/fires");
 const nasaController = require("../controllers/nasa");
+const geodataController = require("../controllers/geodata");
 
 // const { ensureAuth, ensureGuest } = require("../middleware/auth");
 
@@ -14,6 +15,9 @@ router.get("/details/:id", firesController.getFirePage);
 
 // NASA IR data routes
 router.post("/refreshNasaIR", nasaController.refreshNasaIR);
+
+// Geojson data routes
+router.post("/refreshGeoJson", geodataController.refreshGeoJson);
 
 // Feed Routes
 // router.get("/feed", ensureAuth, firesController.getFeed);

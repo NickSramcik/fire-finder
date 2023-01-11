@@ -1,6 +1,6 @@
 // const cloudinary = require("../middleware/cloudinary");
 const Fire = require("../models/Fire");
-const GeoJson = require("../models/GeoJson.js");
+const GeoJson = require("../models/GeoJson");
 let newFires = [];
 
 module.exports = {

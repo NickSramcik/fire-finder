@@ -59,6 +59,8 @@ function initMap() {
         strokeColor: 'red',
       });
       // Render GeoJson data onto a Google Maps datalayer
+      console.log('geojson data:')
+      geojson.forEach(dataset => console.log(dataset.geoJsonData))
       geojson.forEach(dataset => map.data.addGeoJson(dataset.geoJsonData));
     }
 

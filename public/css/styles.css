@@ -1535,16 +1535,16 @@ html {
   margin-bottom: 0.75rem;
 }
 
+.mb-5 {
+  margin-bottom: 1.25rem;
+}
+
 .mb-2 {
   margin-bottom: 0.5rem;
 }
 
 .mr-5 {
   margin-right: 1.25rem;
-}
-
-.inline {
-  display: inline;
 }
 
 .flex {
@@ -1711,16 +1711,6 @@ html {
   color: hsl(var(--b1) / var(--tw-text-opacity));
 }
 
-.text-accent {
-  --tw-text-opacity: 1;
-  color: hsl(var(--a) / var(--tw-text-opacity));
-}
-
-.text-neutral-content {
-  --tw-text-opacity: 1;
-  color: hsl(var(--nc) / var(--tw-text-opacity));
-}
-
 .text-red-800 {
   --tw-text-opacity: 1;
   color: rgb(153 27 27 / var(--tw-text-opacity));
@@ -1744,6 +1734,16 @@ html {
 .text-black {
   --tw-text-opacity: 1;
   color: rgb(0 0 0 / var(--tw-text-opacity));
+}
+
+.text-accent {
+  --tw-text-opacity: 1;
+  color: hsl(var(--a) / var(--tw-text-opacity));
+}
+
+.text-neutral-content {
+  --tw-text-opacity: 1;
+  color: hsl(var(--nc) / var(--tw-text-opacity));
 }
 
 .no-underline {
