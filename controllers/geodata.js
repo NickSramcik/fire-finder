@@ -65,6 +65,7 @@ async function addFire(firePoint) {
         totalBehavior = totalBehavior.split(',').filter((e, i, a) => e != 'null' && i == a.indexOf(e)).join(', ');
         // If no fire behavior data is present, give it value 'unknown'
         if (!totalBehavior) totalBehavior = 'Unknown';
+        
         // Take the complex name if it exists, otherwise use incident name
         let newName = firePoint.properties.IncidentName;
         // Standardize capitalization and trim empty spaces
@@ -76,6 +77,9 @@ async function addFire(firePoint) {
                 newName += ' Fire'
         };
 
+        // Fix discovery date
+        let newDate = (new Date(firePoint.properties.FireDiscoveryDateTime)).toString();
+
         // Add each point to the database as a fire object
         await Fire.create({
           fireName: newName,
@@ -84,7 +88,7 @@ async function addFire(firePoint) {
           fireSize: firePoint.properties.DailyAcres,
           fireBehavior: totalBehavior,
           fireCause: firePoint.properties.FireCause,
-          discoveryDate: firePoint.properties.FireDiscoveryDateTime,
+          discoveryDate: newDate,
           percentContained: firePoint.properties.PercentContained,
           userName: 'system-auto'
         })
