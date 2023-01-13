@@ -43,7 +43,7 @@ async function refreshNasaIR(req, res) {
             // Replace NASA IR data in database
             uploadNasaGeoJson(json);
         });
-        res.redirect("/")
+        res.json(ret);
     }catch (err) {
         console.log(err);
     }

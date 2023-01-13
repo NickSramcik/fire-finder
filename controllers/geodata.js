@@ -125,7 +125,7 @@ async function refreshGeoJson(req, res) {
     await deletePoints('system-auto');
     fetchPerimeterData();
     fetchPointData();
-    res.redirect("/fire/feed");
+    res.json(ret);
    }catch (err) {
     console.log(err);
    }
