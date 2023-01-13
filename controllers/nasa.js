@@ -39,11 +39,11 @@ async function refreshNasaIR(req, res) {
     try {
         console.log('Downloading Nasa IR');
         // Download and convert NASA IR .kmz to .geojson
-        await KMZGeoJSON.toGeoJSON(KMZUrl, function(err, json) {
+        const result = await KMZGeoJSON.toGeoJSON(KMZUrl, function(err, json) {
             // Replace NASA IR data in database
             uploadNasaGeoJson(json);
         });
-        res.json(ret);
+        res.send(result);
     }catch (err) {
         console.log(err);
     }
