@@ -119,13 +119,21 @@ function fetchPointData() {
             });
 };
 
+async function getGeoData() {
+    try {
+        deletePoints('system-auto');
+        fetchPerimeterData();
+        fetchPointData();
+    }catch (err) {
+        console.log(err);
+    }
+}
+
 async function refreshGeoJson(req, res) {
    try {
     console.log('Refreshing GeoJson...');
-    await deletePoints('system-auto');
-    fetchPerimeterData();
-    fetchPointData();
-    res.send('success');
+    const result = await getGeoData();
+    res.send(result);
    }catch (err) {
     console.log(err);
    }
