@@ -13,6 +13,7 @@ async function deleteNasaGeoJson(geoJsonName) {
 
 async function uploadNasaGeoJson(geojson) {
     try {
+        console.log('Processing data...')
         // Check if data includes polygons
         if (geojson['features'].filter(e => e['geometry']['type'] == 'Polygon').length > 0) {
           // Filter out point data, only keep polygon data
@@ -36,11 +37,12 @@ async function uploadNasaGeoJson(geojson) {
 
 async function fetchNasaGeoJson() {
     const KMZUrl = 'https://firms.modaps.eosdis.nasa.gov/api/kml_fire_footprints/usa_contiguous_and_hawaii/24h/suomi-npp-viirs-c2/FirespotArea_usa_contiguous_and_hawaii_suomi-npp-viirs-c2_24h.kmz';
-    
+
     try {
         console.log('Downloading Nasa IR');
         // Download and convert NASA IR .kmz to .geojson
         await KMZGeoJSON.toGeoJSON(KMZUrl, function(err, json) {
+            console.log('NASA KMZ converted to GeoJSON')
             // Replace NASA IR data in database
             uploadNasaGeoJson(json);
         });
