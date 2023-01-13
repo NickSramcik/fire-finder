@@ -121,7 +121,7 @@ function fetchPointData() {
 
 async function getGeoData() {
     try {
-        deletePoints('system-auto');
+        await deletePoints('system-auto');
         fetchPerimeterData();
         fetchPointData();
     }catch (err) {
