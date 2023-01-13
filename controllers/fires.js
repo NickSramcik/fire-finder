@@ -106,6 +106,14 @@ module.exports = {
       console.log(err);
     }
   },
+  getAdmin: async (req, res) => {
+    console.log('Getting admin')
+    try {
+      res.render("admin.ejs");
+    } catch (err) {
+      console.log(err);
+    }
+  },
   getFirePage: async (req, res) => {
     try {
       const fire = await Fire.findById(req.params.id);

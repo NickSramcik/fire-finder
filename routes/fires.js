@@ -22,6 +22,7 @@ router.post("/refreshGeoJson", geodataController.refreshGeoJson);
 // Feed Routes
 // router.get("/feed", ensureAuth, firesController.getFeed);
 router.get("/feed", firesController.getFeed);
+router.get("/admin", firesController.getAdmin);
 router.post("/addGeoJson", upload.single("file"), firesController.addGeoJson);
 
 
