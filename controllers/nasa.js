@@ -1,6 +1,5 @@
 const KMZGeoJSON = require('kmz-geojson');
 const GeoJson = require("../models/GeoJson");
-const KMZUrl = 'https://firms.modaps.eosdis.nasa.gov/api/kml_fire_footprints/usa_contiguous_and_hawaii/24h/suomi-npp-viirs-c2/FirespotArea_usa_contiguous_and_hawaii_suomi-npp-viirs-c2_24h.kmz';
 
 async function deleteNasaGeoJson(geoJsonName) {
     try {
@@ -35,16 +34,26 @@ async function uploadNasaGeoJson(geojson) {
     };
 };
 
-async function refreshNasaIR(req, res) {
+async function fetchNasaGeoJson() {
+    const KMZUrl = 'https://firms.modaps.eosdis.nasa.gov/api/kml_fire_footprints/usa_contiguous_and_hawaii/24h/suomi-npp-viirs-c2/FirespotArea_usa_contiguous_and_hawaii_suomi-npp-viirs-c2_24h.kmz';
+    
     try {
         console.log('Downloading Nasa IR');
         // Download and convert NASA IR .kmz to .geojson
-        const result = await KMZGeoJSON.toGeoJSON(KMZUrl, function(err, json) {
+        await KMZGeoJSON.toGeoJSON(KMZUrl, function(err, json) {
             // Replace NASA IR data in database
             uploadNasaGeoJson(json);
         });
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+async function refreshNasaIR(req, res) {
+    try {
+        const result = await fetchNasaGeoJson();
         res.send(result);
-    }catch (err) {
+    } catch (err) {
         console.log(err);
     }
 }
@@ -52,5 +61,6 @@ async function refreshNasaIR(req, res) {
 module.exports = {
     deleteNasaGeoJson,
     uploadNasaGeoJson,
+    fetchNasaGeoJson,
     refreshNasaIR,
 };
