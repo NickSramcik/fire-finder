@@ -125,7 +125,7 @@ async function refreshGeoJson(req, res) {
     await deletePoints('system-auto');
     fetchPerimeterData();
     fetchPointData();
-    return res;
+    res.send('success');
    }catch (err) {
     console.log(err);
    }
