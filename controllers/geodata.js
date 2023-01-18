@@ -31,20 +31,17 @@ async function uploadPerimeter(geojson) {
     };
 };
 
-function fetchPerimeterData() {
+async function fetchPerimeterData() {
     // Fire Perimeter Data from NIFC
     // Visit https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-current-wildland-fire-perimeters/about
     const perimeterUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName&outSR=4326&f=geojson'
-
-    fetch(perimeterUrl)
-        .then(res => res.json()) // parse response as JSON
-        .then(data => {
-            // console.log(data)
-            uploadPerimeter(data);
-        })
-        .catch(err => {
-                console.log(`error ${err}`)
-            });
+    
+    try {
+        const geodata = await (await fetch(perimeterUrl)).json();
+        await uploadPerimeter(geodata);
+    } catch (err) {
+        console.log(err);
+    };
 };
 
 async function deletePoints(user) {
@@ -97,33 +94,32 @@ async function addFire(firePoint) {
     };
 }
 
-function fetchPointData() {
+async function fetchPointData() {
     // Fire Point Data from NIFC
     // Visit https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-current-wildland-fire-locations/about
-    const perimeterUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Locations/FeatureServer/0/query?where=1%3D1&outFields=DailyAcres,IncidentName,PercentContained,FireBehaviorGeneral,FireCause,FireDiscoveryDateTime,FireBehaviorGeneral3,FireBehaviorGeneral2,FireBehaviorGeneral1&outSR=4326&f=geojson'
+    const firePointUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Locations/FeatureServer/0/query?where=1%3D1&outFields=DailyAcres,IncidentName,PercentContained,FireBehaviorGeneral,FireCause,FireDiscoveryDateTime,FireBehaviorGeneral3,FireBehaviorGeneral2,FireBehaviorGeneral1&outSR=4326&f=geojson'
 
-    fetch(perimeterUrl)
-        .then(res => res.json()) // parse response as JSON
-        .then(data => {
-            // console.log(data)      
-            let fireCount = 0;    
-            for (point of data.features) {
-                // console.log(`Adding ${point.attributes.IncidentName}`)
-                addFire(point);
-                fireCount++;
-            };
-            console.log(`Added ${fireCount} Fire Points`)
-        })
-        .catch(err => {
-                console.log(`error ${err}`)
-            });
+    try {
+        const fireData = await (await fetch(firePointUrl)).json();
+
+        let fireCount = 0;    
+        for (point of fireData.features) {
+            // console.log(`Adding ${point.attributes.IncidentName}`)
+            await addFire(point);
+            fireCount++;
+        };
+        
+        console.log(`Added ${fireCount} Fire Points`)
+    } catch (err) {
+        console.log(err);
+    };
 };
 
 async function getGeoData() {
     try {
         await deletePoints('system-auto');
-        fetchPerimeterData();
-        fetchPointData();
+        await fetchPerimeterData();
+        await fetchPointData();
     }catch (err) {
         console.log(err);
     }

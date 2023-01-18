@@ -4,7 +4,7 @@ const GeoJson = require("../models/GeoJson");
 async function deleteNasaGeoJson(geoJsonName) {
     try {
         // Delete geojson from database
-        await GeoJson.remove({ dataName: geoJsonName });
+        await GeoJson.deleteMany({ dataName: geoJsonName });
         console.log("Deleted NASA Infrared Data");
     } catch (err) {
         console.log(err);
