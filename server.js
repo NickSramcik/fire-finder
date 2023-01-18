@@ -76,8 +76,8 @@ app.use("/fire", fireRoutes);
 //Tailwind
 app.use(express.static('node_modules/tw-elements/dist/js'));
 
-// Connect To Database
-connectDB();
+// // Connect To Database
+// connectDB();
 
 // // Server Running
 // app.listen(process.env.PORT, () => {

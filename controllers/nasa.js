@@ -41,17 +41,17 @@ async function fetchNasaGeoJson() {
     try {
         console.log('Downloading Nasa IR');
         // Download and convert NASA IR .kmz to .geojson
-        const json = await new Promise((resolve, reject) => {
+        const nasajson = await new Promise((resolve, reject) => {
             KMZGeoJSON.toGeoJSON(KMZUrl, function(err, json) {
                 console.log('NASA KMZ converted to GeoJSON')
                 if (err) reject(err)
                 resolve(json)
-            })
-        })
+            });
+        });
         // Replace NASA IR data in database
-        await uploadNasaGeoJson(json);
+        await uploadNasaGeoJson(nasajson);
     } catch (err) {
-            console.log(err);
+        console.log(err);
     };
 }
 
