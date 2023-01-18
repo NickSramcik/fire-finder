@@ -76,8 +76,8 @@ app.use("/fire", fireRoutes);
 //Tailwind
 app.use(express.static('node_modules/tw-elements/dist/js'));
 
-// // Connect To Database
-// connectDB();
+// Connect To Database
+connectDB();
 
 // // Server Running
 // app.listen(process.env.PORT, () => {
@@ -85,7 +85,7 @@ app.use(express.static('node_modules/tw-elements/dist/js'));
 // });
 
 // This section is needed for running fire finder on unix environments!
-  // Refresh NASA IR data every 6 hours
-  // cron.schedule('0 */6 * * *', () => {
-  //   dataScraper.refreshNasaIR();
-  // });
+//   Refresh NASA IR data every 6 hours
+//   cron.schedule('0 */6 * * *', () => {
+//     dataScraper.refreshNasaIR();
+//   });
