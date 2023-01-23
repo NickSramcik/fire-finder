@@ -84,7 +84,7 @@ async function addFire(firePoint) {
         if (newName.includes('Pb') ||
             newName.includes('Rx')) {
                 if (!newFireCause) newFireCause = 'Prescribed';
-                newName = newName.split(' ').map(e => e == 'Rx' || e == Pb ? 'Prescribed Burn' : e).join(' ');
+                newName = newName.split(' ').map(e => e == 'Rx' || e == 'Pb' ? 'Prescribed Burn' : e).join(' ');
         };
         if (newName.includes('Piles')) {
             newFireCause = 'Prescribed';
