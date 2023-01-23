@@ -80,7 +80,7 @@ async function addFire(firePoint) {
         };
         let newFireCause = firePoint.properties.FireCause;
 
-        // Change Pb & Rx to Perscribed Burn
+        // Change Pb & Rx to Prescribed Burn
         if (newName.includes('Pb') ||
             newName.includes('Rx')) {
                 if (!newFireCause) newFireCause = 'Prescribed';
@@ -89,6 +89,13 @@ async function addFire(firePoint) {
         if (newName.includes('Piles')) {
             newFireCause = 'Prescribed';
         };
+        // Change Bp to Burn Piles
+        if (newName.includes('Bp')) {
+            newFireCause = 'Prescribed';
+            newName = newName.split(' ').map(e => e == 'Bp' ? 'Burn Piles' : e).join(' ');
+        }
+
+        // TODO: .includes() method is inefficient, replace with better algorithm 
 
         // Fix discovery date
         let newDate = (new Date(firePoint.properties.FireDiscoveryDateTime)).toString();
