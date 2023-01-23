@@ -70,10 +70,22 @@ async function addFire(firePoint) {
                          .map(e => e[0].toUpperCase() + e.slice(1)).join(' ');
         // Add fire to end of name if it's not already there
         if (!newName.includes('Fire') && 
+            !newName.includes('Rx') && 
+            !newName.includes('Pb') && 
+            !newName.includes('Prep') && 
+            !newName.includes('Piles') && 
+            !newName.includes('Tree Removal') && 
             !newName.includes('Complex')) {
                 newName += ' Fire'
         };
+        let newFireCause = firePoint.properties.FireCause;
 
+        // Change Pb & Rx to Perscribed Burn
+        if (newName.includes('Pb') ||
+            newName.includes('Rx')) {
+                if (!newFireCause) newFireCause = 'Perscribed';
+                newName = newName.split(' ').map(e => e == 'Rx' || e == Pb ? 'Perscribed Burn' : e).join(' ');
+        };
         // Fix discovery date
         let newDate = (new Date(firePoint.properties.FireDiscoveryDateTime)).toString();
 
@@ -84,7 +96,7 @@ async function addFire(firePoint) {
           longitude: firePoint.geometry.coordinates[0],
           fireSize: firePoint.properties.DailyAcres,
           fireBehavior: totalBehavior,
-          fireCause: firePoint.properties.FireCause,
+          fireCause: newFireCause,
           discoveryDate: newDate,
           percentContained: firePoint.properties.PercentContained,
           userName: 'system-auto'

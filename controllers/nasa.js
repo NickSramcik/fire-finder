@@ -53,7 +53,7 @@ async function fetchNasaGeoJson() {
     } catch (err) {
         console.log(err);
     };
-}
+};
 
 async function refreshNasaIR(req, res) {
     try {
@@ -62,7 +62,7 @@ async function refreshNasaIR(req, res) {
     } catch (err) {
         console.log(err);
     }
-}
+};
 
 module.exports = {
     deleteNasaGeoJson,
