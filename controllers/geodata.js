@@ -86,6 +86,10 @@ async function addFire(firePoint) {
                 if (!newFireCause) newFireCause = 'Perscribed';
                 newName = newName.split(' ').map(e => e == 'Rx' || e == Pb ? 'Perscribed Burn' : e).join(' ');
         };
+        if (newName.includes('Piles')) {
+            newFireCause = 'Perscribed';
+        };
+
         // Fix discovery date
         let newDate = (new Date(firePoint.properties.FireDiscoveryDateTime)).toString();
 
