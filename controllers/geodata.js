@@ -83,11 +83,11 @@ async function addFire(firePoint) {
         // Change Pb & Rx to Perscribed Burn
         if (newName.includes('Pb') ||
             newName.includes('Rx')) {
-                if (!newFireCause) newFireCause = 'Perscribed';
-                newName = newName.split(' ').map(e => e == 'Rx' || e == Pb ? 'Perscribed Burn' : e).join(' ');
+                if (!newFireCause) newFireCause = 'Prescribed';
+                newName = newName.split(' ').map(e => e == 'Rx' || e == Pb ? 'Prescribed Burn' : e).join(' ');
         };
         if (newName.includes('Piles')) {
-            newFireCause = 'Perscribed';
+            newFireCause = 'Prescribed';
         };
 
         // Fix discovery date
