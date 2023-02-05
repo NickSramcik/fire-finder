@@ -1796,6 +1796,7 @@ body{
 
 .footer{
   flex: 0 1 40px;
+  grid-auto-flow: column;
 }
 
 #map div{
