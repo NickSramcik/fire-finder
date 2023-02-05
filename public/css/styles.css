@@ -1523,10 +1523,6 @@ html {
   margin-bottom: 3rem;
 }
 
-.mb-16 {
-  margin-bottom: 4rem;
-}
-
 .mb-1 {
   margin-bottom: 0.25rem;
 }
@@ -1543,12 +1539,12 @@ html {
   margin-bottom: 0.5rem;
 }
 
-.mr-5 {
-  margin-right: 1.25rem;
+.mb-16 {
+  margin-bottom: 4rem;
 }
 
-.mt-1 {
-  margin-top: 0.25rem;
+.mr-5 {
+  margin-right: 1.25rem;
 }
 
 .flex {
@@ -1620,6 +1616,18 @@ html {
   gap: 1rem;
 }
 
+.place-self-center {
+  place-self: center;
+}
+
+.self-center {
+  align-self: center;
+}
+
+.justify-self-end {
+  justify-self: end;
+}
+
 .overflow-x-auto {
   overflow-x: auto;
 }
@@ -1665,13 +1673,9 @@ html {
   padding: 0.5rem;
 }
 
-.py-3 {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-}
-
-.pb-3 {
-  padding-bottom: 0.75rem;
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
 }
 
 .pr-5 {
@@ -1760,18 +1764,38 @@ html {
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
-#map{
-  height:400px;
-  min-width: 450px;
-  flex: auto;
-  margin-right: 25px;
+html, body{
+  min-height:100%;
 }
 
-@media screen and (max-width: 500px) {
+body{
+  height:100vh;
+}
+
+#map{
+  flex: 1 1 auto;
+  max-width: 800px;
+  min-width: 350px;
+}
+
+/* @media screen and (max-width: 500px) {
   #map{
-    min-width: 98%;
-    margin-right: 0;
+
   }
+} */
+
+.main{
+  display: flex;
+  flex-flow: column;
+  height: 100%;
+}
+
+.navbar{
+  flex: 0 1 auto;
+}
+
+.footer{
+  flex: 0 1 40px;
 }
 
 #map div{
@@ -1788,16 +1812,6 @@ html {
 
 .gm-style-iw-a {
   opacity: 0.8;
-}
-
-@media (min-width: 768px) {
-  .md\:place-self-center {
-    place-self: center;
-  }
-
-  .md\:justify-self-end {
-    justify-self: end;
-  }
 }
 
 @media (min-width: 1024px) {
