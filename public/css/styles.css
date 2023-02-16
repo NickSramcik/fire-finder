@@ -433,7 +433,7 @@ html {
   --sc: 30 55% 19%;
   --ac: 35 100% 10%;
   --nc: 0 7% 81%;
-  --inc: 198 100% 12%;
+  --inc: 30 55% 19%;
   --suc: 158 100% 10%;
   --wac: 43 100% 11%;
   --erc: 0 100% 14%;
@@ -451,7 +451,7 @@ html {
   --a: 35 69% 52%;
   --n: 0 10% 6%;
   --b1: 0 12% 8%;
-  --in: 198 93% 60%;
+  --in: 30 92% 95%;
   --su: 158 64% 52%;
   --wa: 43 96% 56%;
   --er: 0 91% 71%;
@@ -1682,6 +1682,10 @@ html {
   padding-right: 1.25rem;
 }
 
+.text-left {
+  text-align: left;
+}
+
 .text-center {
   text-align: center;
 }
@@ -1699,6 +1703,11 @@ html {
 .text-xl {
   font-size: 1.25rem;
   line-height: 1.75rem;
+}
+
+.text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
 }
 
 .font-bold {
@@ -1752,6 +1761,11 @@ html {
 .text-neutral-content {
   --tw-text-opacity: 1;
   color: hsl(var(--nc) / var(--tw-text-opacity));
+}
+
+.text-info {
+  --tw-text-opacity: 1;
+  color: hsl(var(--in) / var(--tw-text-opacity));
 }
 
 .no-underline {

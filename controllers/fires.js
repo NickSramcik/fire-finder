@@ -106,6 +106,14 @@ module.exports = {
       console.log(err);
     }
   },
+  getAbout: async (req, res) => {
+    console.log('Getting about')
+    try {
+      res.render("about.ejs");
+    } catch (err) {
+      console.log(err);
+    }
+  },
   getAdmin: async (req, res) => {
     console.log('Getting admin')
     try {

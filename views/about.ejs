@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="firefinder">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire Finder</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+    <link rel="stylesheet" type="text/css" href="/css/styles.css"/>
+    <link type="text/css" href="/css/input.css"/>
+    <link rel="stylesheet" href="/css/map.css">
+    <link rel="icon" href="/img/favicon.png">
+
+</head>
+
+<body>
+<%- include('partials/navbar') -%>
+
+<!-- Heading -->
+<div class="hero bg-base-200 mb-12">
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <h1 class="text-5xl font-bold mb-5">About Fire Finder</h1>
+      <p class="text-left">Fire Finder is designed to make wildfire information as simple and easy to find as possible. Here you can find fire data from multiple sources in one place, without anything getting in your way.</p>
+      <h3 class="text-2xl font-bold my-5">How it works:</h3>
+      <p class="text-left mb-2">Fire Finder automatically updates its data every six hours, to ensure you have access to the most recent information available.</p>
+      <p class="text-left mb-2">Each triangle represents a fire. You can click one for more information. Fires are color coded according to containment percentage, and sized according to how many acres have burned.</p>
+      <p class="text-left mb-2">Some fires have perimeter data available, which are displayed on the map as a red shaded region. Small red points represent hotspots found by NASA's infrared detection system. (Infrared data is typically the most up to date information.)</p>
+      <p class="text-left mb-2">Please note that most fires during the Winter and early Spring are prescribed burns. They are intentional and controlled operations by trained professionals in order to better prepare the local environment for future wildfires.</p>
+      <h3 class="text-2xl font-bold my-5">Where the data comes from:</h3>
+      <p class="text-left">Fire point and perimeter data is sourced from the National Interagency Fire Center (NIFC). Infrared heat points are sourced from NASA's Fire Information for Resource Management System (FIRMS).</p>
+    </div>
+  </div>
+</div>
+
+
+
+<%- include('partials/footer') -%>
+
+</body>
+</html>
