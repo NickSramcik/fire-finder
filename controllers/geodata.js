@@ -33,8 +33,8 @@ async function uploadPerimeter(geojson) {
 
 async function fetchPerimeterData() {
     // Fire Perimeter Data from NIFC
-    // Visit https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-current-wildland-fire-perimeters/about
-    const perimeterUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Perimeters/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName&outSR=4326&f=geojson'
+    // Visit https://nifc.maps.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824
+    const perimeterUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName&f=pgeojson&token='
     
     try {
         const geodata = await (await fetch(perimeterUrl)).json();
@@ -105,7 +105,7 @@ async function addFire(firePoint) {
           fireName: newName,
           latitude: firePoint.geometry.coordinates[1],
           longitude: firePoint.geometry.coordinates[0],
-          fireSize: firePoint.properties.DailyAcres,
+          fireSize: firePoint.properties.IncidentSize,
           fireBehavior: totalBehavior,
           fireCause: newFireCause,
           discoveryDate: newDate,
@@ -119,12 +119,13 @@ async function addFire(firePoint) {
 
 async function fetchPointData() {
     // Fire Point Data from NIFC
-    // Visit https://data-nifc.opendata.arcgis.com/datasets/nifc::wfigs-current-wildland-fire-locations/about
-    const firePointUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Current_WildlandFire_Locations/FeatureServer/0/query?where=1%3D1&outFields=DailyAcres,IncidentName,PercentContained,FireBehaviorGeneral,FireCause,FireDiscoveryDateTime,FireBehaviorGeneral3,FireBehaviorGeneral2,FireBehaviorGeneral1&outSR=4326&f=geojson'
+    // Visit https://nifc.maps.arcgis.com/home/item.html?id=4181a117dc9e43db8598533e29972015
+    const firePointUrl = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query?where=1%3D1&outFields=FinalAcres%2CIncidentName%2CPercentContained%2CIncidentSize%2CFireBehaviorGeneral%2CFireCause%2CFireDiscoveryDateTime%2CFireBehaviorGeneral3%2CFireBehaviorGeneral2%2CFireBehaviorGeneral1&f=pgeojson&token=';
+
 
     try {
         const fireData = await (await fetch(firePointUrl)).json();
-
+        console.log(fireData);
         let fireCount = 0;    
         for (point of fireData.features) {
             // console.log(`Adding ${point.attributes.IncidentName}`)
