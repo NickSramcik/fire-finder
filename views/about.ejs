@@ -16,24 +16,56 @@
 <body>
 <%- include('partials/navbar') -%>
 
-<!-- Heading -->
-<div class="hero bg-base-200 mb-12">
-  <div class="hero-content text-center">
-    <div class="max-w-md">
-      <h1 class="text-5xl font-bold mb-5">About Fire Finder</h1>
-      <p class="text-left">Fire Finder is designed to make wildfire information as simple and easy to find as possible. Here you can find fire data from multiple sources in one place, without anything getting in your way.</p>
-      <h3 class="text-2xl font-bold my-5">How it works:</h3>
-      <p class="text-left mb-2">Fire Finder automatically updates its data every six hours, to ensure you have access to the most recent information available.</p>
-      <p class="text-left mb-2">Each triangle represents a fire. You can click one for more information. Fires are color coded according to containment percentage, and sized according to how many acres have burned.</p>
+<main class="flex flex-col items-center text-center mt-5">
+  <section class="about px-10 lg:px-44">
+    <h1 class="text-5xl font-bold mb-5">What is Fire Finder?</h1>
+    <p class="text-left mb-5">Fire Finder is designed to make wildfire information as simple and easy to find as possible. Here you can find fire data from multiple sources in one place, without anything getting in your way.</p>
+  </section>
+
+  <section class="flex flex-col items-center bg-neutral px-10 lg:px-44">
+    <h3 class="text-2xl font-bold my-5">How it works:</h3>
+    <p class="text-left mb-2">Fire Finder automatically updates its data every six hours, to ensure you have access to the most recent information available. Each triangle represents a fire, colored according to containment. They are also sized based on how many acres they've burned.</p>
+
+    <section class="flex flex-wrap mb-5">
+      <div class="bg-base-100 flex flex-col items-center w-24 m-2 p-1 rounded-md">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current  text-red-500"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.  064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z"></  path></svg>
+        <span>Uncontained</span>
+      </div>
+      
+      <div class="bg-base-100 flex flex-col items-center w-24 m-2 p-1 rounded-md">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current text-orange-500"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z"></path></svg>
+        <span>Mostly Uncontained</span>
+      </div>
+      
+      <div class="bg-base-100 flex flex-col items-center w-24 mx-2 p-1 rounded-md">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current text-yellow-500"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z"></path></svg>
+        <span>Moderately Contained</span>
+      </div>
+      
+      <div class="bg-base-100 flex flex-col items-center w-24 m-2 p-1 rounded-md">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current text-green-500"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z"></path></svg>
+        <span>Mostly Contained</span>
+      </div>
+      
+      <div class="bg-base-100 flex flex-col items-center w-24 m-2 p-1 rounded-md">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="fill-current text-stone-700"><path d="m2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.36</div>7z"></path></svg>
+        <span>Fully Contained</span>
+      </div>
+    </section>
+
+    <section class="flex flex-col items-baseline">
+      <p class="text-left mb-2">Click on a fire for more detailed information!</p>
       <p class="text-left mb-2">Some fires have perimeter data available, which are displayed on the map as a red shaded region. Small red points represent hotspots found by NASA's infrared detection system. (Infrared data is typically the most up to date information.)</p>
       <p class="text-left mb-2">Please note that most fires during the Winter and early Spring are prescribed burns. They are intentional and controlled operations by trained professionals in order to better prepare the local environment for future wildfires.</p>
-      <h3 class="text-2xl font-bold my-5">Where the data comes from:</h3>
-      <p class="text-left">Fire point and perimeter data is sourced from the National Interagency Fire Center (NIFC). Infrared heat points are sourced from NASA's Fire Information for Resource Management System (FIRMS).</p>
-    </div>
+    </section>
+  </section>
+
+  <section class="flex flex-col items-center px-10 lg:px-44 bg-base-100 mb-5">
+    <h3 class="text-2xl font-bold my-5">Where the data comes from:</h3>
+    <p class="text-left">Fire point and perimeter data is sourced from the National Interagency Fire Center (NIFC). Infrared heat points are sourced from NASA's Fire Information for Resource Management System (FIRMS).</p>
   </div>
-</div>
-
-
+  </section>
+</main>
 
 <%- include('partials/footer') -%>
 
