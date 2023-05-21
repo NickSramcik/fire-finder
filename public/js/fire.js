@@ -158,10 +158,15 @@ function initMap() {
           fireIcon.fillColor = 'firebrick';
           fireIcon.strokeColor = 'darkred';
         };
-        // Gray for fires with unknown containment
+        // Orange for fires with unknown containment
         if (e.percentContained == null) {
           fireIcon.fillColor = 'orange';
           fireIcon.strokeColor = 'darkorange';
+        };
+        // Purple for prescribed burns
+        if (fire.fireCause == 'Prescribed') {
+          fireIcon.fillColor = 'purple';
+          fireIcon.strokeColor = 'darkpurple';
         };
 
         // Adjust icon scale to reflect fire size (in acres)
