@@ -1586,6 +1586,11 @@ html {
   margin-right: 1.25rem;
 }
 
+.mx-10 {
+  margin-left: 2.5rem;
+  margin-right: 2.5rem;
+}
+
 .mt-5 {
   margin-top: 1.25rem;
 }
@@ -1661,6 +1666,10 @@ html {
 
 .max-w-lg {
   max-width: 32rem;
+}
+
+.max-w-screen-xl {
+  max-width: 1280px;
 }
 
 .flex-1 {
@@ -1838,9 +1847,9 @@ html {
   color: rgb(68 64 60 / var(--tw-text-opacity));
 }
 
-.text-purple-500 {
+.text-purple-700 {
   --tw-text-opacity: 1;
-  color: rgb(168 85 247 / var(--tw-text-opacity));
+  color: rgb(126 34 206 / var(--tw-text-opacity));
 }
 
 .text-secondary {
@@ -1883,11 +1892,6 @@ html {
   color: hsl(var(--a) / var(--tw-text-opacity));
 }
 
-.text-purple-700 {
-  --tw-text-opacity: 1;
-  color: rgb(126 34 206 / var(--tw-text-opacity));
-}
-
 .no-underline {
   text-decoration-line: none;
 }
@@ -1908,7 +1912,7 @@ body{
 
 #map{
   flex: 1 1 auto;
-  max-width: 800px;
+  /* max-width: 800px; */
   min-width: 350px;
 }
 
@@ -1956,6 +1960,11 @@ body{
 }
 
 @media (min-width: 1024px) {
+  .lg\:mx-3 {
+    margin-left: 0.75rem;
+    margin-right: 0.75rem;
+  }
+
   .lg\:flex-row-reverse {
     flex-direction: row-reverse;
   }
@@ -1963,5 +1972,17 @@ body{
   .lg\:px-44 {
     padding-left: 11rem;
     padding-right: 11rem;
+  }
+
+  .lg\:px-3 {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .xl\:mx-3 {
+    margin-left: 0.75rem;
+    margin-right: 0.75rem;
   }
 }
