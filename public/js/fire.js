@@ -1,13 +1,3 @@
-const fireIcon = {
-  path: 'm2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z',
-  fillColor: 'orange',
-  fillOpacity: 0.8,
-  strokeWeight: 1,
-  strokeColor: 'darkorange',
-  rotation: 0,
-  scale: 0.8,
-};
-
 const fireLocation = {
   latitude: Number(document.querySelector('.fireLatitude').innerText),
   longitude: Number(document.querySelector('.fireLongitude').innerText),
@@ -120,7 +110,7 @@ function initMap() {
     // Process fire location data once recieved
     firePromise.then(fireLocations => {
       // Take the object containing each fire locations. For each entry, run a function.
-      fireLocations.forEach(e => {
+      fireLocations.forEach(fire => {
         // Set Icon Style
         let fireIcon = {
           path: 'm2.095 19.882 9.248-16.5c.133-.237.384-.384.657-.384.272 0 .524.147.656.384l9.248 16.5c.064.115.096.241.096.367 0 .385-.309.749-.752.749h-18.496c-.44 0-.752-.36-.752-.749 0-.126.031-.252.095-.367z',
@@ -134,61 +124,61 @@ function initMap() {
         
         // Color code symbols according to containment %
         // Black for fully contained fires
-        if (e.percentContained >= 100) {
+        if (fire.percentContained >= 100) {
           fireIcon.fillColor = '#1c1c1c';
           fireIcon.strokeColor = 'black';
         };
         // Green for fires between 90% and 100% containment
-        if (e.percentContained < 100 && e.percentContained >= 90) {
+        if (fire.percentContained < 100 && fire.percentContained >= 90) {
           fireIcon.fillColor = 'forestgreen';
           fireIcon.strokeColor = 'darkgreen';
         };
         // Yellow for fires between 50% and 90% containment
-        if (e.percentContained < 90 && e.percentContained >= 50) {
+        if (fire.percentContained < 90 && fire.percentContained >= 50) {
           fireIcon.fillColor = 'gold';
           fireIcon.strokeColor = 'goldenrod';
         };
         // Orange for fires between 10% & 50% containment
-        if (e.percentContained < 50 && e.percentContained >= 10) {
+        if (fire.percentContained < 50 && fire.percentContained >= 10) {
           fireIcon.fillColor = 'orange';
           fireIcon.strokeColor = 'darkorange';
         };
         // Red for fires with less than 10% containment
-        if (e.percentContained < 10) {
+        if (fire.percentContained < 10) {
           fireIcon.fillColor = 'firebrick';
           fireIcon.strokeColor = 'darkred';
         };
         // Orange for fires with unknown containment
-        if (e.percentContained == null) {
+        if (fire.percentContained == null) {
           fireIcon.fillColor = 'orange';
           fireIcon.strokeColor = 'darkorange';
         };
         // Purple for prescribed burns
         if (fire.fireCause == 'Prescribed') {
-          fireIcon.fillColor = 'purple';
-          fireIcon.strokeColor = 'darkpurple';
+          fireIcon.fillColor = 'mediumpurple';
+          fireIcon.strokeColor = 'mediumorchid';
         };
 
         // Adjust icon scale to reflect fire size (in acres)
-        if (e.fireSize < 1000) {
+        if (fire.fireSize < 1000) {
+          fireIcon.scale = 0.9;
+        };
+        if (fire.fireSize < 500) {
+          fireIcon.scale = 0.8;
+        };
+        if (fire.fireSize < 100) {
           fireIcon.scale = 0.7;
         };
-        if (e.fireSize < 500) {
+        if (fire.fireSize < 10) {
           fireIcon.scale = 0.6;
-        };
-        if (e.fireSize < 100) {
-          fireIcon.scale = 0.5;
-        };
-        if (e.fireSize < 10) {
-          fireIcon.scale = 0.4;
         };
         
         // Add a marker using the data from each fire location data entry
         addMarker({
-          coords: {lat: Number(e.latitude), lng: Number(e.longitude)},
-          content: `<h1>${e.fireName}</h2>`,
+          coords: {lat: Number(fire.latitude), lng: Number(fire.longitude)},
+          content: `<h1>${fire.fireName}</h2>`,
           iconImage: fireIcon,
-          link: `/fire/details/${e._id}`
+          link: `/fire/details/${fire._id}`
         });
       });
     });

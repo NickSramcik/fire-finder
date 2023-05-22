@@ -146,8 +146,8 @@ function initMap() {
         };
         // Purple for prescribed burns
         if (fire.fireCause == 'Prescribed') {
-          fireIcon.fillColor = 'purple';
-          fireIcon.strokeColor = 'darkpurple';
+          fireIcon.fillColor = 'mediumpurple';
+          fireIcon.strokeColor = 'mediumorchid';
         };
 
         // Adjust icon scale to reflect fire size (in acres)

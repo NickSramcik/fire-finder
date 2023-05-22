@@ -1892,6 +1892,11 @@ html {
   color: hsl(var(--a) / var(--tw-text-opacity));
 }
 
+.text-purple-400 {
+  --tw-text-opacity: 1;
+  color: rgb(192 132 252 / var(--tw-text-opacity));
+}
+
 .no-underline {
   text-decoration-line: none;
 }
