@@ -44,7 +44,7 @@ module.exports = {
           // If no fire behavior data is present, give it value 'unknown'
           if (!totalBehavior) totalBehavior = 'Unknown';
           // Take the complex name if it exists, otherwise use incident name
-          let newName = datapoint.properties.CpxName || datapoint.properties.IncidentName;
+          let newName = datapoint.properties.CpxName || datapoint.properties.IncidentName || 'Unknown Fire';
           // Standardize capitalization and trim empty spaces
           newName = newName.trim().toLowerCase().split(' ').filter(e => e)
                     .map(e => e[0].toUpperCase() + e.slice(1)).join(' ');
