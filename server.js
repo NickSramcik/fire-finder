@@ -19,23 +19,23 @@ require('dotenv').config({ path: './config/.env' });
 // Passport config
 require('./config/passport')(passport);
 
-// // Connect asyncronously for Cyclic's serverless architecture
-// const { MongoClient } = require('mongodb');
-// const uri = process.env.DB_STRING;
-// const client = new MongoClient(uri, { useUnifiedTopology: true });
-// const dbS = connectDB().then(() => {
-//     client.connect(async err => {
-//         //Connect To Database
-//         if (err) {
-//             console.error(err);
-//             return false;
-//         }
-//         // connection to mongo is successful, listen for requests
-//         app.listen(3000, () => {
-//             console.log('Server is running, you better catch it!');
-//         });
-//     });
-// });
+// Connect asyncronously for Cyclic's serverless architecture
+const { MongoClient } = require('mongodb');
+const uri = process.env.DB_STRING;
+const client = new MongoClient(uri, { useUnifiedTopology: true });
+const dbS = connectDB().then(() => {
+    client.connect(async err => {
+        //Connect To Database
+        if (err) {
+            console.error(err);
+            return false;
+        }
+        // connection to mongo is successful, listen for requests
+        app.listen(3000, () => {
+            console.log('Server is running, you better catch it!');
+        });
+    });
+});
 
 //Using EJS for views
 app.set('view engine', 'ejs');
@@ -77,13 +77,13 @@ app.use('/fire', fireRoutes);
 //Tailwind
 app.use(express.static('node_modules/tw-elements/dist/js'));
 
-// Connect To Database
-connectDB();
+// // Connect To Database
+// connectDB();
 
-// Server Running
-app.listen(process.env.PORT, () => {
-  console.log("Server is running, you better catch it!");
-});
+// // Server Running
+// app.listen(process.env.PORT, () => {
+//   console.log("Server is running, you better catch it!");
+// });
 
 // This section is needed for running fire finder on unix environments!
 //   Refresh NASA IR data every 6 hours
