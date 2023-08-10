@@ -1,16 +1,17 @@
 async function getGeoJson() {
-    console.log('Getting GeoJson Data')
-  try {
-      const response = await fetch('/fire/getGeoJson', {
-          method: 'get',
-          headers: {'Content-Type': 'application/json'},
-      })
-      const data = await response.json();
-      console.log('Data:', data);
-      return data;
-  } catch(err) {
-      console.log(err)
-  }
+    console.log('Getting GeoJson Data');
+    try {
+        const response = await fetch('/fire/getGeoJson', {
+            method: 'get',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        console.log(response)
+        const data = await response.json();
+        console.log('Data:', data);
+        return data;
+    } catch (err) {
+        console.log(err);
+    }
 }
 
 async function getFires() {
