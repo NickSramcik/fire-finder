@@ -20,6 +20,12 @@ async function uploadNasaGeoJson(geojson) {
           console.log('Found polygons. Filtering out point data.');
           geojson['features'] = geojson['features'].filter(e => e['geometry']['type'] == 'Polygon');
         };
+
+        // Clean up NASA IR data
+        geojson['features'].forEach(object => {
+            delete object.properties
+        })
+
         // Delete old NASA IR data
         await deleteNasaGeoJson('NASA IR');
         // Upload new NASA IR data to database
