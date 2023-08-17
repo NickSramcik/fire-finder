@@ -89,6 +89,7 @@ module.exports = {
   getGeoJson: async (req, res) => {
     try {
       let geojson = await GeoJson.find().sort({ createdAt: "desc" }).lean();
+      console.log(`loaded ${geojson.length} geojson features`);
       // console.log('geojson data: ', geojson);
       res.json(geojson);
     } catch (err) {

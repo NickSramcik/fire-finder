@@ -17,9 +17,10 @@ async function uploadPerimeter(geojson) {
     try {
         // Delete old Fire Perimeter data
         await deletePerimeter('autoPerimeter');
-
+        let perimeterCount = 0;
         // Split feature collection into individual features
         geojson['features'].forEach(feature => {
+            perimeterCount++
             // Upload new Fire Perimeter data to database
             GeoJson.create({
             dataName: 'autoPerimeter',
@@ -29,7 +30,7 @@ async function uploadPerimeter(geojson) {
         });
         })
 
-        console.log('Fire Perimeter GeoJson data has been added!');
+        console.log(`${perimeterCount} points of Fire Perimeter GeoJson data have been added!`);
     } catch (err) {
         console.log(err);
     }

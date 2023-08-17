@@ -30,7 +30,9 @@ async function uploadNasaGeoJson(geojson) {
         await deleteNasaGeoJson('NASA IR');
 
         // Split NASA feature collection into their own features
+        let featureCount = 0
         geojson['features'].forEach(feature => {
+            featureCount++
             // Upload new NASA IR data to database
             GeoJson.create({
             dataName: 'NASA IR',
@@ -40,7 +42,7 @@ async function uploadNasaGeoJson(geojson) {
             });
         })
         
-        console.log("NASA Infrared data has been added!");
+        console.log(`${featureCount} points of NASA Infrared data have been added!`);
     } catch (err) {
         console.log(err);
     };
