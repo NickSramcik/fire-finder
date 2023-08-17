@@ -28,13 +28,18 @@ async function uploadNasaGeoJson(geojson) {
 
         // Delete old NASA IR data
         await deleteNasaGeoJson('NASA IR');
-        // Upload new NASA IR data to database
-        await GeoJson.create({
-          dataName: 'NASA IR',
-          geoJsonData: geojson,
-          // user: req.user.id,
-          // userName: req.user.userName,
-        });
+
+        // Split NASA feature collection into their own features
+        geojson['features'].forEach(feature => {
+            // Upload new NASA IR data to database
+            GeoJson.create({
+            dataName: 'NASA IR',
+            geoJsonData: feature,
+            // user: req.user.id,
+            // userName: req.user.userName,
+            });
+        })
+        
         console.log("NASA Infrared data has been added!");
     } catch (err) {
         console.log(err);

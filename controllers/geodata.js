@@ -17,13 +17,18 @@ async function uploadPerimeter(geojson) {
     try {
         // Delete old Fire Perimeter data
         await deletePerimeter('autoPerimeter');
-        // Upload new Fire Perimeter data to database
-        await GeoJson.create({
+
+        // Split feature collection into individual features
+        geojson['features'].forEach(feature => {
+            // Upload new Fire Perimeter data to database
+            GeoJson.create({
             dataName: 'autoPerimeter',
-            geoJsonData: geojson,
+            geoJsonData: feature,
             // user: req.user.id,
             // userName: req.user.userName,
         });
+        })
+
         console.log('Fire Perimeter GeoJson data has been added!');
     } catch (err) {
         console.log(err);
@@ -139,8 +144,8 @@ async function fetchPointData() {
 async function getGeoData() {
     try {
         await deletePoints('system-auto');
-        await fetchPerimeterData();
         await fetchPointData();
+        await fetchPerimeterData();
     } catch (err) {
         console.log(err);
     }

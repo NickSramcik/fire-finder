@@ -13,7 +13,7 @@ async function getGeoJson() {
           headers: {'Content-Type': 'application/json'},
       })
       const data = await response.json();
-      console.log('Data:', data);
+      // console.log('Data:', data);
       return data;
   } catch(err) {
       console.log(err)
@@ -42,17 +42,16 @@ function initMap() {
     };
 
     function renderGeoJson(geojson) {
+      // console.log('geojson data: ', geojson)
       // Style geojson data
       map.data.setStyle({
-        // icon: '//example.com/path/to/image.png',
-        fillColor: 'red',
-        strokeColor: 'red',
+          // icon: '//example.com/path/to/image.png',
+          fillColor: 'red',
+          strokeColor: 'red',
       });
       // Render GeoJson data onto a Google Maps datalayer
-      console.log('geojson data:')
-      geojson.forEach(dataset => console.log(dataset.geoJsonData))
       geojson.forEach(dataset => map.data.addGeoJson(dataset.geoJsonData));
-    }
+  }
 
     // New Map
     var map = new google.maps.Map(document.getElementById('map'), options);
