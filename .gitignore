@@ -15,8 +15,13 @@ pnpm-debug.log*
 
 # environment variables
 config.env
+frontend/config.env
+backend/config.env
 .env
 .env.production
+
+# legacy testing components
+frontend/src/components/PointTest.vue
 
 # macOS-specific files
 .DS_Store
