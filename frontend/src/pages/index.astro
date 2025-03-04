@@ -1,17 +1,16 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Card from '../components/Card.astro';
-import Navbar from '../components/Navbar.astro';
-import Map from '../components/Map.vue';
+import Main from '../components/Main.vue';
 ---
 
-<Layout title="Fire Finder">
-	<main>
-		<Navbar />
-
-		<Map client:only="vue"/>
-	</main>
-</Layout>
+<html>
+  <head>
+    <title>Fire Finder</title>
+  </head>
+  <body>
+    <!-- Render the Main component -->
+    <Main client:load />
+  </body>
+</html>
 
 <style>
 	html, body, #app, main {

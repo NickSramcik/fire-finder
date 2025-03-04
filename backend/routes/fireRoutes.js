@@ -1,6 +1,11 @@
 import express from 'express';
 const router = express.Router();
+import upload from '../middleware/multer.js';
+import { addFire } from '../controllers/fireController.js';
 import Data from '../models/Data.js';
+
+// Route to add a fire with file upload
+router.post("/api/addFire", upload.single("file"), addFire);
 
 // Get all data points
 router.get('/', async (req, res) => {
