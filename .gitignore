@@ -1,8 +1,24 @@
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Node dependencies
 node_modules
-.env
-.vscode
+
+# Logs
+logs
+*.log
+
+# Misc
 .DS_Store
-Dockerfile
-fly.toml
-.dockerignore
-.github/
+.fleet
+.idea
+
+# Local env files
+.env
+.env.*
+!.env.example
