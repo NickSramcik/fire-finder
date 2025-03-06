@@ -10,8 +10,16 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "nuxt": "^3.15.4",
+    "@nuxtjs/color-mode": "^3.5.2",
+    "@nuxtjs/tailwindcss": "^6.13.1",
+    "nuxt": "^3.6.0",
+    "nuxt-mapbox": "^1.6.2",
+    "nuxt-mongoose": "^1.0.6",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "daisyui": "^5.0.0",
+    "mapbox-gl": "^3.10.0"
   }
 }
