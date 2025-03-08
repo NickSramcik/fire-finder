@@ -1,5 +1,5 @@
 <template>
-    <h2>Map coming soon!</h2>
+    <h2>Fire Feed</h2>
 
     <form @submit.prevent="submitData">
         <label for="name">Name:</label>
@@ -37,8 +37,9 @@ onMounted(async () => {
 
 async function fetchData() {
     try {
-        const response = await fetch('http://localhost:2121/api/data');
-        points.value = await response.json();
+        const response = await fetch('/api/data');
+        const result = await response.json();
+        points.value = result.data || [];
         console.log('Fetched points:', points.value);
     } catch (error) {
         console.error('Error fetching data: ', error);
@@ -53,7 +54,7 @@ async function submitData() {
     const newPoint = { name: name.value, location: location.value };
 
     try {
-        const response = await fetch('http://localhost:2121/api/data', {
+        const response = await fetch('/api/data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newPoint)

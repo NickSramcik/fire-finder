@@ -1,21 +1,14 @@
 <template>
-    <h2>Map coming soon!</h2>
 
-    <form @submit.prevent="submitData">
-        <label for="name">Name:</label>
-        <input id="name" v-model="name" type="text" required />
+<h2>Admin Options</h2>
 
-        <label for="location">Location:</label>
-        <input id="location" v-model="location" type="text" required />
+<div>
+    <button @click="renewFires" class="btn btn-accent">Renew Fire Data</button>
+    <p v-if="loading">Loading...</p>
+    <p v-if="error">Error: {{ error }}</p>
+    <p v-if="response">Response: {{ response }}</p>
+  </div>
 
-        <button type="submit">Add Data Point</button>
-    </form>
-
-    <ul>
-        <li v-for="point in points" :key="point._id">
-            {{ point.name }} - {{ point.location }}
-        </li>
-    </ul>
 </template>
 
 <script setup>
@@ -35,57 +28,46 @@ onMounted(async () => {
     await fetchData();
 });
 
-async function fetchData() {
-    try {
-        const response = await fetch('http://localhost:2121/api/data');
-        points.value = await response.json();
-        console.log('Fetched points:', points.value);
-    } catch (error) {
-        console.error('Error fetching data: ', error);
-    }
-}
+// Reactive state
+const loading = ref(false); // Track loading state
+const error = ref(null); // Track error messages
+const response = ref(null); // Store API response
 
-async function submitData() {
-    console.log('Submitting point...');
-    console.log('Name:', name.value);
-    console.log('Location:', location.value);
-
-    const newPoint = { name: name.value, location: location.value };
+// Function to send the API request
+async function renewFires() {
+    loading.value = true; // Set loading to true
+    error.value = null; // Reset error
+    response.value = null; // Reset response
 
     try {
-        const response = await fetch('http://localhost:2121/api/data', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newPoint)
-        });
+    // Send the API request
+    const result = await fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+        title: 'foo',
+        body: 'bar',
+        userId: 1,
+        }),
+    });
 
-        if (response.ok) {
-            await fetchData();
-            name.value = '';
-            location.value = '';
-        } else {
-            console.error('Failed to submit data');
-        }
-    } catch (error) {
-        console.error('Error submitting data: ', error);
+    // Parse the response
+    const data = await result.json();
+    response.value = data; // Store the response
+    } catch (err) {
+        error.value = 'Failed to send request: ' + err.message; // Handle errors
+    } finally {
+        loading.value = false; // Reset loading state
     }
-}
+};
+
 </script>
 
 <style scoped>
-form {
-  margin-bottom: 1rem;
+form, label, input, button, h2 {
+  margin: 1rem;
 }
 
-label {
-  margin-right: 0.5rem;
-}
-
-input {
-  margin-right: 1rem;
-}
-
-button {
-  margin-top: 0.5rem;
-}
 </style>
