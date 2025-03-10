@@ -6,62 +6,40 @@
     <button @click="renewFires" class="btn btn-accent">Renew Fire Data</button>
     <p v-if="loading">Loading...</p>
     <p v-if="error">Error: {{ error }}</p>
-    <p v-if="response">Response: {{ response }}</p>
-  </div>
+    <p v-if="response">Success! Added {{ response.data.added }} fires, updated {{ response.data.updated }} fires.</p>
+</div>
 
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 
-// Supress extraneous non-props attributes warning
-defineOptions({
-  inheritAttrs: false,
-});
+const loading = ref(false);
+const error = ref(null);
+const response = ref(null);
 
-const points = ref([]);
-const name = ref('');
-const location = ref('');
-
-onMounted(async () => {
-    console.log('Fetching initial data...');
-    await fetchData();
-});
-
-// Reactive state
-const loading = ref(false); // Track loading state
-const error = ref(null); // Track error messages
-const response = ref(null); // Store API response
-
-// Function to send the API request
 async function renewFires() {
-    loading.value = true; // Set loading to true
-    error.value = null; // Reset error
-    response.value = null; // Reset response
+  loading.value = true;
+  error.value = null;
+  response.value = null;
 
-    try {
-    // Send the API request
-    const result = await fetch('https://jsonplaceholder.typicode.com/posts', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-        title: 'foo',
-        body: 'bar',
-        userId: 1,
-        }),
+  try {
+    const res = await fetch('/api/renewFires', {
+      method: 'POST'
     });
 
-    // Parse the response
-    const data = await result.json();
-    response.value = data; // Store the response
-    } catch (err) {
-        error.value = 'Failed to send request: ' + err.message; // Handle errors
-    } finally {
-        loading.value = false; // Reset loading state
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
     }
-};
+
+    const data = await res.json();
+    response.value = data;
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+}
 
 </script>
 
