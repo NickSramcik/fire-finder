@@ -26,4 +26,6 @@ const fireSchema = new Schema({
     },
 }, { typeKey: '$type' }); // Fixes Mongoose confusing geoJSON "type" property with its own schema definitions
 
+fireSchema.index({ 'properties.area': -1 });
+
 export default model('FirePoint', fireSchema);

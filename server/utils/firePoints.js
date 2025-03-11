@@ -102,7 +102,7 @@ export const processFire = (rawPoint) => {
             discoveredAt: new Date(rawPoint.properties.FireDiscoveryDateTime),
             lastUpdated: Date.now(),
             status: fixStatus(),
-            area: rawPoint.properties.FinalAcres,
+            area: rawPoint.properties.IncidentSize,
             containment: rawPoint.properties.PercentContained,
             cause: rawPoint.properties.FireCause,
             source: 'NIFC',

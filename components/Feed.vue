@@ -1,21 +1,40 @@
 <template>
     <h2>Fire Feed</h2>
 
-    <form @submit.prevent="submitData">
-        <label for="name">Name:</label>
-        <input id="name" v-model="name" type="text" required />
+    <div class="overflow-x-auto">
+        <table class="table table-zebra table-xs">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th>Size</th>
+                    <th>Status</th>
+                    <th>Containment</th>
+                    <th>Cause</th>
+                    <th>Discovered</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(point, i) in points" :key="point._id">
+                    <th>{{ i + 1 }}</th>
+                    <td>{{ point.properties.name }}</td>
+                    <td>{{ point.properties.area.toLocaleString('en') }}</td>
+                    <td>{{ point.properties.status }}</td>
+                    <td>{{ getContainment(point.properties) }}</td>
+                    <td>{{ point.properties.cause }}</td>
+                    <td>{{ fixDate(point.properties.discoveredAt) }}</td>
+                </tr>
 
-        <label for="location">Location:</label>
-        <input id="location" v-model="location" type="text" required />
+            </tbody>
+        </table>
+    </div>
 
-        <button type="submit">Add Data Point</button>
-    </form>
 
-    <ul>
+    <!-- <ul>
         <li v-for="point in points" :key="point._id">
-            {{ point.name }} - {{ point.location }}
+            {{ point.properties.name }} - {{ point.properties.status }} - {{ point.properties.area }}
         </li>
-    </ul>
+    </ul> -->
 </template>
 
 <script setup>
@@ -32,12 +51,29 @@ const location = ref('');
 
 onMounted(async () => {
     console.log('Fetching initial data...');
-    await fetchData();
+    await fetchFeed();
 });
 
-async function fetchData() {
+function fixDate(date) {
+    const newDate = new Date(date);
+    const options = {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    };
+
+    return newDate.toLocaleDateString('en', options);
+}
+
+function getContainment(point) {
+    if (point.status == 'Prescribed') return 'N/A';
+    if (point.containment !== null) return point.containment + '%';
+    return ('Unknown');
+}
+
+async function fetchFeed() {
     try {
-        const response = await fetch('/api/data');
+        const response = await fetch('/api/feed');
         const result = await response.json();
         points.value = result.data || [];
         console.log('Fetched points:', points.value);
