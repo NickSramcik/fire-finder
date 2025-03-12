@@ -25,7 +25,9 @@ const fireSchema = new Schema({
       source: String,
     },
 }, { typeKey: '$type' }); // Fixes Mongoose confusing geoJSON "type" property with its own schema definitions
+// TODO: Verify changing this typeKey is actually needed
 
 fireSchema.index({ 'properties.area': -1 });
+fireSchema.index({ geometry: '2dsphere' });
 
 export default model('FirePoint', fireSchema);
