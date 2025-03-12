@@ -85,7 +85,6 @@ function addFireLayer() {
         <h3 class="font-bold text-lg">${e.features[0].properties.name}</h3>
         <p class="mt-2"><span class="font-semibold">Status:</span> ${e.features[0].properties.status}</p>
         <p><span class="font-semibold">Containment:</span> ${e.features[0].properties.containment}%</p>
-        <p><span>${e.lngLat}</span></p>
         <p><span class="font-semibold">Area:</span> ${e.features[0].properties.area?.toLocaleString() || 'N/A'} acres</p>
       </div>
     `)
@@ -109,6 +108,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style>
+@import 'https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css';
+
 #map { 
   position: fixed;
   width: 100%;
@@ -117,18 +118,33 @@ onBeforeUnmount(() => {
 
 .mapboxgl-popup {
   max-width: 300px;
-  z-index: 100; /* Ensure above map */
-}
-
-.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip{
-  align-self: flex-start;
 }
 
 .mapboxgl-popup-content {
+  background-color: var(--color-base-200);
+  opacity: 90%;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   padding: 1rem;
 }
+
+.mapboxgl-popup-tip {
+  border-bottom-color: var(--color-base-200) !important;
+  opacity: 90%;
+}
+
+.mapboxgl-popup-close-button {
+  height: 16px;
+  width: 16px;
+  margin-right: 10px;
+  margin-top: 10px;
+  background-color: var(--color-base-200);
+  border-radius: 2px;
+}
+
+/* .mapboxgl-popup-close-button span {
+  margin: auto;
+} */
 
 @media (max-width: 640px) {
   .mapboxgl-popup {
@@ -141,8 +157,8 @@ onBeforeUnmount(() => {
   top: 20px;
   left: 20px;
   padding: 10px;
-  background: red;
-  color: white;
+  background: var(--color-error);
+  color: var(--color-error-content);
   z-index: 1;
 }
 </style>
