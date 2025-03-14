@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
       data: result
     }
   } catch (error) {
-    console.error("API error:", error);
+    console.error("API error renewing fires:", error);
     throw createError({
       statusCode: 500,
       statusMessage: 'Internal Server Error',
