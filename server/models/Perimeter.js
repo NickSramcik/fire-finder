@@ -25,6 +25,6 @@ const perimeterSchema = new Schema({
   },
 }); 
 
-perimeterSchema.index({ geometry: '2dsphere' });
+// perimeterSchema.index({ geometry: '2dsphere' }); // Disabled until solution for polygons with holes, breaks this index TODO
 
 export default model('Perimeter', perimeterSchema);

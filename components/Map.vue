@@ -6,7 +6,8 @@ const config = useRuntimeConfig();
 mapboxgl.accessToken = config.public.mapboxToken;
 
 const map = ref(null);
-const { data: fires, error } = await useFetch('/api/fire');
+const { data: fires, error: fireError } = await useFetch('/api/fire');
+const { data: perimeters, error: perimeterError } = await useFetch('/api/perimeter');
 
 onMounted(() => {
   initializeMap();
@@ -26,11 +27,11 @@ function initializeMap() {
 
   map.value.on('load', () => {
     addFireLayer();
+    addPerimeterLayer();
   });
 }
 
 function addFireLayer() {
-  // Convert MongoDB data to GeoJSON
   const fireData = {
     type: 'FeatureCollection',
     features: fires.value.data.map(fire => ({
@@ -65,7 +66,6 @@ function addFireLayer() {
   });
 
   map.value.on('click', 'fire-points', (e) => {
-  // Remove any existing popups
   const popups = document.getElementsByClassName('mapboxgl-popup');
   if (popups.length) popups[0].remove();
 
@@ -90,6 +90,43 @@ function addFireLayer() {
     `)
     .addTo(map.value);
 });
+}
+
+function addPerimeterLayer() {
+  const perimeterData = {
+    type: 'FeatureCollection',
+    features: perimeters.value.data.map(perimeter => ({
+      type: 'Feature',
+      geometry: perimeter.geometry,
+      properties: perimeter.properties
+    }))
+  };
+
+  map.value.addSource('perimeters', {
+    type: 'geojson',
+    data: perimeterData
+  });
+
+  map.value.addLayer({
+    id: 'perimeter-fill',
+    type: 'fill',
+    source: 'perimeters',
+    paint: {
+      'fill-color': '#FF0000',
+      'fill-opacity': 0.2,
+      'fill-outline-color': '#FF0000'
+    }
+  });
+
+  map.value.addLayer({
+    id: 'perimeter-line',
+    type: 'line',
+    source: 'perimeters',
+    paint: {
+      'line-color': '#FF0000',
+      'line-width': 2
+    }
+  });
 }
 
 onBeforeUnmount(() => {

@@ -128,11 +128,11 @@ export const processPerimeter = function (perimeter) {
         console.error(`Polygon from '${name}' is invalid: ${err}`);
     }
 
-    const cleanedGeometry = cleanGeometry(perimeter.geometry);
+    // const cleanedGeometry = cleanGeometry(perimeter.geometry);
 
     return {
         type: 'Feature',
-        geometry: cleanedGeometry,
+        geometry: perimeter.geometry,
         properties: {
             name: name,
         },
