@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "blueprint": "node buildBlueprint.mjs",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
