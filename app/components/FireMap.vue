@@ -4,11 +4,8 @@ import { ref, onMounted, onUnmounted, computed } from "vue";
 import mapboxgl from "mapbox-gl";
 
 const config = useRuntimeConfig();
-mapboxgl.accessToken = process.env.PUBLIC_MAPBOX_TOKEN ||
-    window.PUBLIC_MAPBOX_TOKEN ||
-    (window.__NUXT__ && window.__NUXT__.config.public.mapboxToken);
+mapboxgl.accessToken = config.public.mapboxToken;
 if (!mapboxgl.accessToken) console.error('Mapbox Token error!');
-console.log(config.public.mapboxToken);
 
 const map = ref(null);
 const mapInitialized = ref(false);

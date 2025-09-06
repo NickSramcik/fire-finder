@@ -7,6 +7,10 @@ app = 'firefinder'
 primary_region = 'sjc'
 
 [build]
+  build_secrets = { PUBLIC_MAPBOX_TOKEN = "from_secret" }
+
+[env]
+  PUBLIC_MAPBOX_TOKEN = { from_secret = "PUBLIC_MAPBOX_TOKEN" }
 
 [http_service]
   internal_port = 3000
