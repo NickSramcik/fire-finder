@@ -4,8 +4,8 @@ import { ref, onMounted, onUnmounted, computed } from "vue";
 import mapboxgl from "mapbox-gl";
 
 const config = useRuntimeConfig();
-mapboxgl.accessToken = config.public.mapboxToken;
-if (!mapboxgl.accessToken) console.error('Mapbox Token error!');
+// mapboxgl.accessToken = config.public.mapboxToken;
+// if (!mapboxgl.accessToken) console.error('Mapbox Token error!');
 
 const map = ref(null);
 const mapInitialized = ref(false);
@@ -16,6 +16,13 @@ const { data: perimeters, error: perimeterError } = await useFetch('/api/perimet
 const error = computed(() => fireError.value || perimeterError.value);
 
 onMounted(() => {
+  const { data } = await useFetch('/api/token')
+  if (data.value?.token) {
+    mapboxgl.accessToken = data.value.token
+  }
+
+  if (!mapboxgl.accessToken) console.error('Mapbox Token error!');
+
   initializeMap();
 });
 
