@@ -1,5 +1,5 @@
 # 🗺️ PROJECT BLUEPRINT
-*Generated Sep 1, 2025, 01:24 PM PDT*
+*Generated Sep 5, 2025, 04:30 PM PDT*
 
 ## Overview
 
@@ -12,24 +12,30 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
 
 ## PROJECT STRUCTURE
 ```
+📁 .github
+  📁 workflows
+    📄 fly-deploy.yml
 📄 BLUEPRINT.md
+📄 Dockerfile
 📄 README.md
-📄 app.vue
+📁 app
+  📄 app.vue
+  📁 components
+    📄 Feed.vue
+    📄 Help.vue
+    📄 Map.vue
+    📄 Navbar.vue
+    📄 Profile.vue
+  📁 pages
+    📄 index.vue
 📁 assets
   📁 css
     📄 tailwind.css
 📄 buildBlueprint.mjs
-📁 components
-  📄 Feed.vue
-  📄 Help.vue
-  📄 Map.vue
-  📄 Navbar.vue
-  📄 Profile.vue
-📁 layouts
+📄 eslint.config.mjs
+📄 fly.toml
 📄 nuxt.config.ts
 📄 package.json
-📁 pages
-  📄 index.vue
 📁 public
   📄 favicon.ico
   📄 robots.txt
@@ -49,7 +55,6 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
       📄 index.post.js
     📁 renewPerimeters
       📄 index.post.js
-  📁 middleware
   📁 models
     📄 Data.js
     📄 FirePoint.js
@@ -68,8 +73,8 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
 ```json
 {
   "name": "nuxt-app",
-  "private": true,
   "type": "module",
+  "private": true,
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
@@ -78,17 +83,20 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@nuxtjs/color-mode": "^3.5.2",
-    "@nuxtjs/tailwindcss": "^6.13.1",
-    "nuxt": "^3.6.0",
-    "nuxt-mapbox": "^1.6.2",
-    "nuxt-mongoose": "^1.0.6",
-    "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "@mapbox/mapbox-gl-geocoder": "^4.7.4",
+    "@nuxt/eslint": "^1.9.0",
+    "eslint": "^9.35.0",
+    "mongoose": "^8.18.0",
+    "nuxt": "^4.1.0",
+    "nuxt-mapbox": "^1.5.0",
+    "typescript": "^5.9.2",
+    "vue": "^3.5.20",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "daisyui": "^5.0.0",
-    "mapbox-gl": "^3.10.0"
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "daisyui": "^5.1.7",
+    "mapbox-gl": "^2.15.0"
   }
 }
 
@@ -98,28 +106,37 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
 ```javascript
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2024-11-01',
+  compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: [
-    '@nuxtjs/tailwindcss',
-    'nuxt-mapbox',
-    'nuxt-mongoose',
-    '@nuxtjs/color-mode',
-  ],
-  tailwindcss: {
-    exposeConfig: true,
-    viewer: true,
-  },
-  runtimeConfig: {
-    public: {
-      mapboxToken: process.env.PUBLIC_MAPBOX_TOKEN,
-    },
-  },
+  modules: ['@nuxt/eslint', 'nuxt-mapbox']
 })
 ```
 
-### ./pages/index.vue
+### ./app/app.vue
 ```javascript
+<template>
+  <div class="h-full">
+    <Navbar :active-tab="activeTab" @switch-tab="switchTab" />
+    <NuxtPage :active-tab="activeTab" />
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+
+const activeTab = ref('map')
+
+function switchTab(tab) {
+  activeTab.value = tab
+}
+</script>
+
+
+```
+
+### ./app/pages/index.vue
+```javascript
+<!-- eslint-disable vue/multi-word-component-names -->
 <template>
   <main class="h-full">
     <KeepAlive>
@@ -134,6 +151,7 @@ import Feed from '~/components/Feed.vue'
 import Help from '~/components/Help.vue'
 import Profile from '~/components/Profile.vue'
 
+// eslint-disable-next-line vue/require-prop-types
 const props = defineProps(['activeTab'])
 
 const components = {
@@ -157,7 +175,7 @@ html, body, #app, main {
 </style>
 ```
 
-### ./components/Map.vue
+### ./app/components/Map.vue
 ```javascript
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
@@ -361,7 +379,7 @@ onBeforeUnmount(() => {
 }
 ```
 
-### ./components/Feed.vue
+### ./app/components/Feed.vue
 ```javascript
 <template>
     <h2>Fire Feed</h2>
@@ -489,6 +507,60 @@ input {
 
 button {
   margin-top: 0.5rem;
+}
+</style>
+
+```
+
+### ./app/components/Navbar.vue
+```javascript
+<template>
+
+  <nav class="bg-base-200 flex items-center p-4">
+    <button :class="{ active: activeTab === 'map'}" @click="switchTab('map')">Fire Finder</button>
+    <button :class="{ active: activeTab === 'feed'}" @click="switchTab('feed')">Feed</button>
+    <button :class="{ active: activeTab === 'help'}" @click="switchTab('help')">Help</button>
+    <button :class="{ active: activeTab === 'profile'}" @click="switchTab('profile')">Profile</button>
+  </nav>
+
+</template>
+
+
+<script setup>
+
+defineProps({
+  activeTab: {
+    type: String,
+    required: true
+  }
+})
+
+const emit = defineEmits(['switch-tab']);
+function switchTab(tab) {
+  emit('switch-tab', tab);
+}
+
+</script>
+
+
+<style>
+nav {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #1f1f1f;
+}
+
+button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+button.active {
+  font-weight: bold;
+  color: #ff5722;
 }
 </style>
 
@@ -716,4 +788,79 @@ export const processFire = (rawPoint) => {
         return newStatus;
     }
 }
+
+// { type: 'Feature',
+//     geometry: { type: 'Point', coordinates: [ -150.866437532387, 60.4878035289611 ] },
+//     properties:
+//      { FinalAcres: null,
+//        IncidentName: 'CY25 Wharf Ave RX',
+//        PercentContained: null,
+//        IncidentSize: null,
+//        FireBehaviorGeneral: null,
+//        FireCause: 'Undetermined',
+//        FireDiscoveryDateTime: 1735750800000,
+//        FireBehaviorGeneral3: null,
+//        FireBehaviorGeneral2: null,
+//        FireBehaviorGeneral1: null } }
+
+// for (const rawFire of externalData) {
+//       const processed = processFire(rawFire);
+//       const existing = await Fire.findOne({ name: processed.name });
+      
+//       existing ? await updateFire(existing._id, processed) && updated++
+//               : await addFire(processed) && added++;
+//     }
+  
+//     return { added, updated, total: await Fire.countDocuments() };
+
+// Log that fires are renewing at this time
+// Selectively request fire data from NIFC API
+// Loop through each fire point ---------------------- Time complexity really matters here! 
+//      Search database for this fire
+//      If it exists:
+//          Update this fire
+//      If it doesn't exist:
+//          Process this fire data
+//          Add this fire
+// Check database for dead fires that haven't updated in several months, delete any that are found
+
+
+// Update Fire Data
+
+// Get old data for this fire
+// Check status, area, containent, cause, source, and geometry for changes
+```
+
+### ./server/utils/db.js
+```javascript
+import mongoose from 'mongoose';
+
+let isConnected = false;
+
+export const connectDB = async () => {
+  if (isConnected) {
+    console.log('Using existing database connection');
+    return;
+  }
+
+  try {
+    const dbUri = process.env.MONGODB_URI;
+    
+    if (!dbUri) {
+      throw new Error('MONGODB_URI environment variable is not defined');
+    }
+
+    const db = await mongoose.connect(dbUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    isConnected = db.connections[0].readyState === 1;
+    console.log('MongoDB connected successfully');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
+};
+
 ```

@@ -1,9 +1,8 @@
 {
   "name": "nuxt-app",
-  "private": true,
   "type": "module",
+  "private": true,
   "scripts": {
-    "blueprint": "node buildBlueprint.mjs",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
@@ -11,16 +10,20 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@mapbox/mapbox-gl-geocoder": "^4.7.4",
+    "@nuxt/eslint": "^1.9.0",
     "@nuxtjs/color-mode": "^3.5.2",
-    "@nuxtjs/tailwindcss": "^6.13.1",
-    "nuxt": "^3.6.0",
-    "nuxt-mapbox": "^1.6.2",
-    "nuxt-mongoose": "^1.0.6",
-    "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "eslint": "^9.35.0",
+    "mongoose": "^8.18.0",
+    "nuxt": "^4.1.0",
+    "nuxt-mapbox": "^1.5.0",
+    "typescript": "^5.9.2",
+    "vue": "^3.5.20",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "daisyui": "^5.0.0",
-    "mapbox-gl": "^3.10.0"
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "daisyui": "^5.1.7",
+    "mapbox-gl": "^2.15.0"
   }
 }

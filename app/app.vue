@@ -1,6 +1,6 @@
 <template>
   <div class="h-full">
-    <Navbar :active-tab="activeTab" @switch-tab="switchTab" />
+    <NavBar :active-tab="activeTab" @switch-tab="switchTab" />
     <NuxtPage :active-tab="activeTab" />
   </div>
 </template>

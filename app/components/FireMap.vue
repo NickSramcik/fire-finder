@@ -1,13 +1,19 @@
+<!-- eslint-disable @typescript-eslint/no-unused-vars -->
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import mapboxgl from "mapbox-gl";
 
 const config = useRuntimeConfig();
 mapboxgl.accessToken = config.public.mapboxToken;
+if (!mapboxgl.accessToken) console.error('Mapbox Token error!')
 
 const map = ref(null);
+const mapInitialized = ref(false);
 const { data: fires, error: fireError } = await useFetch('/api/fire');
 const { data: perimeters, error: perimeterError } = await useFetch('/api/perimeter');
+
+// Create a computed property to combine errors
+const error = computed(() => fireError.value || perimeterError.value);
 
 onMounted(() => {
   initializeMap();
@@ -16,22 +22,29 @@ onMounted(() => {
 function initializeMap() {
   try {
     map.value = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/streets-v12',
-    center: [-118.243683, 34.052235], // Default center (LA)
-    zoom: 6
-  });
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-118.243683, 34.052235],
+      zoom: 6
+    });
+    
+    // Wait for map to load before adding layers
+    map.value.on('load', () => {
+      mapInitialized.value = true;
+      addFireLayer();
+      addPerimeterLayer();
+    });
   } catch (err) {
     console.error("Failed to initialize map:", err);
   }
-
-  map.value.on('load', () => {
-    addFireLayer();
-    addPerimeterLayer();
-  });
 }
 
 function addFireLayer() {
+  if (!map.value || !fires.value?.data) {
+    console.log('Map data failed to load.');
+    return;
+  }
+
   const fireData = {
     type: 'FeatureCollection',
     features: fires.value.data.map(fire => ({
@@ -130,16 +143,21 @@ function addPerimeterLayer() {
 }
 
 onBeforeUnmount(() => {
-  if (map.value) map.value.remove();
+  if (map.value) {
+    map.value.remove();
+    map.value = null;
+  }
 });
 </script>
 
 <template>
-  
   <div>
-    <div id="map"></div>
+    <div id="map"/>
     <div v-if="error" class="error-banner">
       Error loading fire data: {{ error.message }}
+    </div>
+    <div v-if="!mapInitialized" class="loading-overlay">
+      Loading map...
     </div>
   </div>
 </template>
@@ -179,10 +197,6 @@ onBeforeUnmount(() => {
   border-radius: 2px;
 }
 
-/* .mapboxgl-popup-close-button span {
-  margin: auto;
-} */
-
 @media (max-width: 640px) {
   .mapboxgl-popup {
     max-width: 200px;
@@ -194,8 +208,21 @@ onBeforeUnmount(() => {
   top: 20px;
   left: 20px;
   padding: 10px;
+  margin-top: 50px;
   background: var(--color-error);
   color: var(--color-error-content);
+  z-index: 1;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 4px;
   z-index: 1;
 }
 </style>

@@ -15,12 +15,15 @@ const CONFIG = {
     showcaseFiles: [
         'package.json',
         'nuxt.config.ts',
-        './pages/index.vue',
-        './components/Map.vue',
-        './components/Feed.vue',
+        './app/app.vue',
+        './app/pages/index.vue',
+        './app/components/Map.vue',
+        './app/components/Feed.vue',
+        './app/components/Navbar.vue',
         './server/models/FirePoint.js',
         './server/api/renewFires/index.post.js',
         './server/utils/firePoints.js',
+        './server/utils/db.js',
     ]
 };
 
@@ -31,7 +34,6 @@ const resolveRelativePath = relativePath =>
 
 // FILE SYSTEM HELPERS
 const isDirectory = path => fs.statSync(path).isDirectory();
-const isMarkdownFile = name => name.endsWith('.md');
 const shouldBeIgnored = name =>
     CONFIG.ignoreDirectories.includes(name) ||
     CONFIG.ignoreFiles.some(pattern => name.includes(pattern));

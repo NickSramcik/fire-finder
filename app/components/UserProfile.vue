@@ -3,14 +3,14 @@
 <h2>Admin Options</h2>
 
 <div>
-    <button @click="renewFires" class="btn btn-accent">Renew Fire Point Data</button>
+    <button class="btn btn-accent" @click="renewFires">Renew Fire Point Data</button>
     <p v-if="loading">Loading...</p>
     <p v-if="error">Error: {{ error }}</p>
     <p v-if="response">Success! Added {{ response.data.added }} fires, updated {{ response.data.updated }} fires.</p>
 </div>
 
 <div>
-    <button @click="renewPerimeters" class="btn btn-accent">Renew Fire Perimeters</button>
+    <button class="btn btn-accent" @click="renewPerimeters">Renew Fire Perimeters</button>
     <p v-if="loading">Loading...</p>
     <p v-if="error">Error: {{ error }}</p>
     <p v-if="response">Success! Added {{ response.data.added }} fire perimeters, updated {{ response.data.updated }} fire perimeters.</p>
