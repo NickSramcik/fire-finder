@@ -1,20 +1,21 @@
-import FirePoint from '../../models/FirePoint.js'
+import { connectDB } from '../../utils/db';
+import FirePoint from '../../models/FirePoint';
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async () => {
   try {
-    const data = await FirePoint.find({
-        'properties.area': { 
-          $exists: true, 
-          $ne: null 
-        }
-      }).lean();
-
-    return { status: 200, data }
+    await connectDB();
+    const fires = await FirePoint.find({
+      'properties.area': { 
+        $exists: true, 
+        $ne: null 
+      }
+    }).lean();
+    return { data: fires };
   } catch (error) {
-    sendError(event, createError({
+    console.error('Error fetching fires:', error);
+    return createError({
       statusCode: 500,
-      statusMessage: 'Server Error',
-      data: error.message
-    }))
+      statusMessage: 'Internal Server Error',
+    });
   }
-})
+});

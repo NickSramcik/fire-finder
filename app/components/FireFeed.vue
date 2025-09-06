@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-unused-vars -->
 <template>
     <h2>Fire Feed</h2>
 
@@ -5,7 +6,7 @@
         <table class="table table-zebra table-xs">
             <thead>
                 <tr>
-                    <th></th>
+                    <th/>
                     <th>Name</th>
                     <th>Size</th>
                     <th>Status</th>

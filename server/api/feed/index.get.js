@@ -1,7 +1,9 @@
+import { connectDB } from '../../utils/db';
 import FirePoint from '../../models/FirePoint.js'
 
 export default defineEventHandler(async (event) => {
   try {
+    await connectDB();
     const data = await FirePoint.find({
         'properties.area': { 
           $exists: true,  // Ensures the field exists
