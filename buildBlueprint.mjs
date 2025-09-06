@@ -24,6 +24,7 @@ const CONFIG = {
         './server/api/renewFires/index.post.js',
         './server/utils/firePoints.js',
         './server/utils/db.js',
+        './.github/workflows/fly-deploy.yml',
     ]
 };
 

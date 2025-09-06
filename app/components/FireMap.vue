@@ -5,7 +5,8 @@ import mapboxgl from "mapbox-gl";
 
 const config = useRuntimeConfig();
 mapboxgl.accessToken = config.public.mapboxToken;
-if (!mapboxgl.accessToken) console.error('Mapbox Token error!')
+if (!mapboxgl.accessToken) console.error('Mapbox Token error!');
+console.log(config.public.mapboxToken);
 
 const map = ref(null);
 const mapInitialized = ref(false);
