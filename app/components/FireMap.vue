@@ -4,25 +4,20 @@ import { ref, onMounted, onUnmounted, computed } from "vue";
 import mapboxgl from "mapbox-gl";
 
 const config = useRuntimeConfig();
-// mapboxgl.accessToken = config.public.mapboxToken;
-// if (!mapboxgl.accessToken) console.error('Mapbox Token error!');
+mapboxgl.accessToken = config.public.mapboxToken;
+if (!mapboxgl.accessToken) console.error('Mapbox Token missing!');
 
 const map = ref(null);
 const mapInitialized = ref(false);
-const { data: fires, error: fireError } = await useFetch('/api/fire');
-const { data: perimeters, error: perimeterError } = await useFetch('/api/perimeter');
 
-// Create a computed property to combine errors
-const error = computed(() => fireError.value || perimeterError.value);
+// Use the new API endpoints
+const { data: mapData, error } = await useFetch('/api/map-data');
+
+// Create computed properties for fires and perimeters
+const fires = computed(() => mapData.value?.fires || []);
+const perimeters = computed(() => mapData.value?.perimeters || []);
 
 onMounted(() => {
-  const { data } = await useFetch('/api/token')
-  if (data.value?.token) {
-    mapboxgl.accessToken = data.value.token
-  }
-
-  if (!mapboxgl.accessToken) console.error('Mapbox Token error!');
-
   initializeMap();
 });
 
@@ -47,14 +42,14 @@ function initializeMap() {
 }
 
 function addFireLayer() {
-  if (!map.value || !fires.value?.data) {
-    console.log('Map data failed to load.');
+  if (!map.value || !fires.value.length) {
+    console.log('No fire data available.');
     return;
   }
 
   const fireData = {
     type: 'FeatureCollection',
-    features: fires.value.data.map(fire => ({
+    features: fires.value.map(fire => ({
       type: 'Feature',
       geometry: fire.geometry,
       properties: fire.properties
@@ -86,36 +81,29 @@ function addFireLayer() {
   });
 
   map.value.on('click', 'fire-points', (e) => {
-  const popups = document.getElementsByClassName('mapboxgl-popup');
-  if (popups.length) popups[0].remove();
+    const popups = document.getElementsByClassName('mapboxgl-popup');
+    if (popups.length) popups[0].remove();
 
-  const popupOffsets = {
-    'top': [-1000, -1000],
-  }
-
-  const popup = new mapboxgl.Popup({
-    closeButton: true,
-    closeOnClick: true,
-    anchor: 'top-left',
-    offset: popupOffsets
-  })
-    .setLngLat(e.lngLat)
-    .setHTML(`
-      <div class="popup-content">
-        <h3 class="font-bold text-lg">${e.features[0].properties.name}</h3>
-        <p class="mt-2"><span class="font-semibold">Status:</span> ${e.features[0].properties.status}</p>
-        <p><span class="font-semibold">Containment:</span> ${e.features[0].properties.containment}%</p>
-        <p><span class="font-semibold">Area:</span> ${e.features[0].properties.area?.toLocaleString() || 'N/A'} acres</p>
-      </div>
-    `)
-    .addTo(map.value);
-});
+    const popup = new mapboxgl.Popup({
+      closeButton: true,
+      closeOnClick: true,
+      anchor: 'top-left'
+    })
+      .setLngLat(e.lngLat)
+      .setHTML(createPopupContent(e.features[0]))
+      .addTo(map.value);
+  });
 }
 
 function addPerimeterLayer() {
+  if (!map.value || !perimeters.value.length) {
+    console.log('No perimeter data available.');
+    return;
+  }
+
   const perimeterData = {
     type: 'FeatureCollection',
-    features: perimeters.value.data.map(perimeter => ({
+    features: perimeters.value.map(perimeter => ({
       type: 'Feature',
       geometry: perimeter.geometry,
       properties: perimeter.properties
@@ -147,6 +135,18 @@ function addPerimeterLayer() {
       'line-width': 2
     }
   });
+}
+
+function createPopupContent(feature) {
+  const props = feature.properties;
+  return `
+    <div class="popup-content">
+      <h3 class="font-bold text-lg">${props.name}</h3>
+      <p class="mt-2"><span class="font-semibold">Status:</span> ${props.status}</p>
+      <p><span class="font-semibold">Containment:</span> ${props.containment}%</p>
+      <p><span class="font-semibold">Area:</span> ${props.area?.toLocaleString() || 'N/A'} acres</p>
+    </div>
+  `;
 }
 
 onBeforeUnmount(() => {
@@ -201,35 +201,5 @@ onBeforeUnmount(() => {
   margin-right: 10px;
   margin-top: 10px;
   background-color: var(--color-base-200);
-  border-radius: 2px;
-}
-
-@media (max-width: 640px) {
-  .mapboxgl-popup {
-    max-width: 200px;
-  }
-}
-
-.error-banner {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  padding: 10px;
-  margin-top: 50px;
-  background: var(--color-error);
-  color: var(--color-error-content);
-  z-index: 1;
-}
-
-.loading-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 10px 20px;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  border-radius: 4px;
-  z-index: 1;
 }
 </style>

@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "blue": "node buildBlueprint.mjs"
   },
   "dependencies": {
     "@mapbox/mapbox-gl-geocoder": "^4.7.4",

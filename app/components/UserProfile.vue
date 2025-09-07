@@ -1,21 +1,21 @@
 <template>
+  <div>
+    <h2>Admin Options</h2>
 
-<h2>Admin Options</h2>
+    <div>
+      <button class="btn btn-accent" @click="renewFires">Renew Fire Point Data</button>
+      <p v-if="loading">Loading...</p>
+      <p v-if="error">Error: {{ error }}</p>
+      <p v-if="response">Success! Added {{ response.added }} fires, updated {{ response.updated }} fires.</p>
+    </div>
 
-<div>
-    <button class="btn btn-accent" @click="renewFires">Renew Fire Point Data</button>
-    <p v-if="loading">Loading...</p>
-    <p v-if="error">Error: {{ error }}</p>
-    <p v-if="response">Success! Added {{ response.data.added }} fires, updated {{ response.data.updated }} fires.</p>
-</div>
-
-<div>
-    <button class="btn btn-accent" @click="renewPerimeters">Renew Fire Perimeters</button>
-    <p v-if="loading">Loading...</p>
-    <p v-if="error">Error: {{ error }}</p>
-    <p v-if="response">Success! Added {{ response.data.added }} fire perimeters, updated {{ response.data.updated }} fire perimeters.</p>
-</div>
-
+    <div>
+      <button class="btn btn-accent" @click="renewPerimeters">Renew Fire Perimeters</button>
+      <p v-if="loading">Loading...</p>
+      <p v-if="error">Error: {{ error }}</p>
+      <p v-if="response">Success! Added {{ response.added }} fire perimeters, updated {{ response.updated }} fire perimeters.</p>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -31,8 +31,10 @@ async function renewFires() {
   response.value = null;
 
   try {
-    const res = await fetch('/api/renewFires', {
-      method: 'POST'
+    const res = await fetch('/api/fires', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'renew' })
     });
 
     if (!res.ok) {
@@ -40,7 +42,7 @@ async function renewFires() {
     }
 
     const data = await res.json();
-    response.value = data;
+    response.value = data.data;
   } catch (err) {
     error.value = err.message;
   } finally {
@@ -54,8 +56,10 @@ async function renewPerimeters() {
   response.value = null;
 
   try {
-    const res = await fetch('/api/renewPerimeters', {
-      method: 'POST'
+    const res = await fetch('/api/perimeters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'renew' })
     });
 
     if (!res.ok) {
@@ -63,19 +67,17 @@ async function renewPerimeters() {
     }
 
     const data = await res.json();
-    response.value = data;
+    response.value = data.data;
   } catch (err) {
     error.value = err.message;
   } finally {
     loading.value = false;
   }
 }
-
 </script>
 
 <style scoped>
 form, label, input, button, h2 {
   margin: 1rem;
 }
-
 </style>
