@@ -8,11 +8,9 @@ export default defineEventHandler(async event => {
 
         let fires = await getFires(query);
 
-        // Apply sorting (most recent first by default)
+        // Apply sorting (Largest to smallest by default)
         fires = fires.sort((a, b) => {
-            const dateA = new Date(a.properties.discoveredAt || 0);
-            const dateB = new Date(b.properties.discoveredAt || 0);
-            return dateB - dateA; 
+            return b.properties.area - a.properties.area
         });
 
         // Apply limit if specified

@@ -15,6 +15,16 @@ const mapQuery = apiQuery => {
         dbQuery['properties.cause'] = apiQuery.cause;
     }
 
+    if (apiQuery.minLastUpdated) {
+        dbQuery['properties.lastUpdated'] = {
+            $gte: apiQuery.minLastUpdated
+        };
+    }
+
+    if (apiQuery.hasArea) {
+        dbQuery['properties.area'] = { $exists: true, $ne: null };
+    }
+
     return dbQuery;
 };
 
