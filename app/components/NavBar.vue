@@ -37,13 +37,23 @@ nav {
 
 button {
   border: none;
-  background: none;
   cursor: pointer;
   font-size: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  background: none;
+  color: #ccc;
+}
+
+button:hover {
+  background-color: #333;
+  color: white;
 }
 
 button.active {
+  background-color: #ff5722;
+  color: white;
   font-weight: bold;
-  color: #ff5722;
 }
 </style>
