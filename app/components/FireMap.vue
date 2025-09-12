@@ -45,7 +45,8 @@ function initializeMap() {
     map.value.on('load', async () => {
        try {
          await loadIcons();
-         addFireLayer();
+         await addFireLayer();
+         await addPerimeterLayer();
        } catch (err) {
          console.error("Failed in map load event:", err);
        }
@@ -119,6 +120,50 @@ function addFireLayer() {
   });
 
   addMapInteractivity();
+}
+
+function addPerimeterLayer() {
+  if (!map.value || !perimeters.value.length) {
+    console.log('No perimeter data available.');
+    return;
+  }
+
+  const perimeterData = {
+    type: 'FeatureCollection',
+    features: perimeters.value.map(perimeter => ({
+      type: 'Feature',
+      geometry: perimeter.geometry,
+      properties: perimeter.properties,
+    }))
+  };
+
+  // Add perimeter source
+  map.value.addSource('perimeters', {
+    type: 'geojson',
+    data: perimeterData
+  });
+  
+  // Add perimeter fill layer
+  map.value.addLayer({
+    id: 'perimeters-fill',
+    type: 'fill',
+    source: 'perimeters',
+    paint: {
+      'fill-color': '#ff5722',
+      'fill-opacity': 0.3
+    }
+  }, 'fire-points');
+  
+  // Add perimeter outline layer
+  map.value.addLayer({
+    id: 'perimeters-outline',
+    type: 'line',
+    source: 'perimeters',
+    paint: {
+      'line-color': '#ff5722',
+      'line-width': 2
+    }
+  }, 'fire-points');
 }
 
 function addMapInteractivity() {

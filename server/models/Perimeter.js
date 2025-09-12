@@ -22,6 +22,14 @@ const perimeterSchema = new Schema({
       type: String,
       required: true,
     },
+    sourceId: {
+      type: String,
+      required: true,
+    },
+    lastUpdated: {
+      type: Date,
+      required: true,
+    },
   },
 }); 
 

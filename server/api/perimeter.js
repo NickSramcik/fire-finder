@@ -11,13 +11,13 @@ export default defineEventHandler(async event => {
     try {
         const queryParams = getQuery(event);
 
-        // GET /api/perimeters
+        // GET /api/perimeter
         if (event.method === 'GET') {
             const perimeters = await getPerimeters(queryParams);
             return { statusCode: 200, data: perimeters };
         }
 
-        // POST /api/perimeters
+        // POST /api/perimeter
         if (event.method === 'POST') {
             const body = await readBody(event);
 
@@ -30,7 +30,7 @@ export default defineEventHandler(async event => {
             return { statusCode: 201, data: newPerimeter };
         }
 
-        // PUT /api/perimeters
+        // PUT /api/perimeter
         if (event.method === 'PUT') {
             const body = await readBody(event);
 
@@ -45,7 +45,7 @@ export default defineEventHandler(async event => {
             return { statusCode: 200, data: updatedPerimeter };
         }
 
-        // DELETE /api/perimeters
+        // DELETE /api/perimeter
         if (event.method === 'DELETE') {
             if (Object.keys(queryParams).length === 0) {
                 return createError({

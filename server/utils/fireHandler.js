@@ -17,7 +17,7 @@ const mapQuery = apiQuery => {
 
     if (apiQuery.minLastUpdated) {
         dbQuery['properties.lastUpdated'] = {
-            $gte: apiQuery.minLastUpdated
+            $gte: apiQuery.minLastUpdated,
         };
     }
 
@@ -80,21 +80,23 @@ export const updateFire = async (sourceId, updateData) => {
 // Delete fires
 export const deleteFire = async (apiQuery = {}) => {
     try {
-      const dbQuery = mapQuery(apiQuery)
-      
-      // Safety check - don't allow empty queries that would delete all documents
-      if (Object.keys(dbQuery).length === 0) {
-        throw new Error('Delete query must include at least one filter parameter')
-      }
-      
-      const result = await FirePoint.deleteMany(dbQuery)
-      console.log(`Deleted ${result.deletedCount} fire(s)`)
-      return result
+        const dbQuery = mapQuery(apiQuery);
+
+        // Safety check - don't allow empty queries that would delete all documents
+        if (Object.keys(dbQuery).length === 0) {
+            throw new Error(
+                'Delete query must include at least one filter parameter'
+            );
+        }
+
+        const result = await FirePoint.deleteMany(dbQuery);
+        console.log(`Deleted ${result.deletedCount} fire(s)`);
+        return result;
     } catch (error) {
-      console.error('Error deleting fire(s):', error)
-      throw error
+        console.error('Error deleting fire(s):', error);
+        throw error;
     }
-  }
+};
 
 // Renew fire data
 export const renewFires = async () => {
@@ -106,11 +108,12 @@ export const renewFires = async () => {
         for (const rawFire of fireData) {
             const processedFire = processFire(rawFire);
             const sourceId = processedFire.properties.sourceId;
-
             try {
-                const existingFire = await getFires({ sourceId })
+                const fireExists = (await getFires({ sourceId })).length;
 
-                if (existingFire) {
+                if (fireExists) {
+                    console.log(
+                    );
                     await updateFire(sourceId, processedFire);
                     updated++;
                 } else {
@@ -122,7 +125,9 @@ export const renewFires = async () => {
             }
         }
 
-        console.log(`Added ${added} fires and Updated ${updated} fires`);
+        console.log(`Added ${added} fires and Updated ${updated} fires`)
+        await cleanupOldFires();
+        await removeDuplicateFires();
         return { added, updated };
     } catch (error) {
         console.error('Error renewing fires:', error);
@@ -133,7 +138,7 @@ export const renewFires = async () => {
 // Fetch fire points from NIFC API
 export const fetchFirePoints = async () => {
     const firePointUrl =
-        'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query?where=1%3D1&outFields=FinalAcres%2CIncidentSize%2CSourceOID%2CIncidentName%2CPercentContained%2CIncidentSize%2CFireBehaviorGeneral%2CFireCause%2CFireDiscoveryDateTime%2CFireBehaviorGeneral3%2CFireBehaviorGeneral2%2CFireBehaviorGeneral1&f=pgeojson&token=';
+        'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query?where=1%3D1&outFields=FinalAcres,IncidentName,PercentContained,IncidentSize,FireBehaviorGeneral,FireCause,FireDiscoveryDateTime,FireBehaviorGeneral3,FireBehaviorGeneral2,FireBehaviorGeneral1,UniqueFireIdentifier,IncidentTypeCategory,IncidentShortDescription,POOState,POOCounty,POOJurisdictionalAgency,ModifiedOnDateTime_dt&f=pgeojson&token=';
 
     try {
         const firePoints = await (await fetch(firePointUrl)).json();
@@ -148,14 +153,18 @@ export const fetchFirePoints = async () => {
 // Process raw fire data
 export const processFire = rawPoint => {
     let prescribed = false;
-
     const processedPoint = {
         geometry: { type: 'Point', coordinates: rawPoint.geometry.coordinates },
         properties: {
-            sourceId: rawPoint.properties.SourceOID,
+            sourceId: rawPoint.properties.UniqueFireIdentifier,
             name: fixName(),
+            fireType: rawPoint.properties.IncidentTypeCategory,
+            landmark: rawPoint.properties.IncidentShortDescription,
+            state: rawPoint.properties.POOState,
+            county: rawPoint.properties.POOCounty,
+            agency: rawPoint.properties.POOJurisdictionalAgency,
             discoveredAt: new Date(rawPoint.properties.FireDiscoveryDateTime),
-            lastUpdated: Date.now(),
+            lastUpdated: new Date(rawPoint.properties.ModifiedOnDateTime_dt),
             status: fixStatus(),
             area: rawPoint.properties.IncidentSize,
             containment: rawPoint.properties.PercentContained,
@@ -218,7 +227,7 @@ export const processFire = rawPoint => {
 };
 
 // Clean up old fires that haven't been updated
-export const cleanupOldFires = async (daysThreshold = 30) => {
+export const cleanupOldFires = async (daysThreshold = 90) => {
     try {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
@@ -227,10 +236,61 @@ export const cleanupOldFires = async (daysThreshold = 30) => {
             'properties.lastUpdated': { $lt: cutoffDate },
         });
 
-        console.log(`Cleaned up ${result.deletedCount} old fires`);
+        console.log(
+            `Cleaned up ${result.deletedCount} old fires (older than ${daysThreshold} months)`
+        );
         return result;
     } catch (error) {
         console.error('Error cleaning up old fires:', error);
+        throw error;
+    }
+};
+
+// Remove duplicate fires with the same sourceId (keeping the most recent)
+export const removeDuplicateFires = async () => {
+    try {
+        // Find duplicates by grouping by sourceId
+        const duplicates = await FirePoint.aggregate([
+            {
+                $group: {
+                    _id: '$properties.sourceId',
+                    count: { $sum: 1 },
+                    docs: { $push: '$$ROOT' },
+                },
+            },
+            {
+                $match: {
+                    count: { $gt: 1 },
+                },
+            },
+        ]);
+
+        let deletedCount = 0;
+
+        // For each group of duplicates, keep the most recent and delete others
+        for (const group of duplicates) {
+            // Sort by newest first
+            group.docs.sort(
+                (a, b) =>
+                    new Date(b.properties.lastUpdated) -
+                    new Date(a.properties.lastUpdated)
+            );
+
+            // Keep the first (most recent) and delete the rest
+            const idsToDelete = group.docs.slice(1).map(doc => doc._id);
+
+            if (idsToDelete.length > 0) {
+                const result = await FirePoint.deleteMany({
+                    _id: { $in: idsToDelete },
+                });
+                deletedCount += result.deletedCount;
+            }
+        }
+
+        console.log(`Removed ${deletedCount} duplicate fires`);
+        return { deletedCount };
+    } catch (error) {
+        console.error('Error removing duplicate fires:', error);
         throw error;
     }
 };

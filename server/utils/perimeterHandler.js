@@ -85,12 +85,37 @@ export const deletePerimeter = async (apiQuery = {}) => {
 // Renew perimeter data from external source
 export const renewPerimeters = async () => {
     try {
-        // Implement your perimeter renewal logic here
-        // This would be similar to renewFires but for perimeters
-        console.log('Renewing perimeters...');
+        const perimeterData = await fetchPerimeters();
+        let added = 0,
+            updated = 0,
+            failed = [];
 
-        // Placeholder implementation
-        return { added: 0, updated: 0 };
+        for (const rawPerimeter of perimeterData) {
+            const processedPerimeter = processPerimeter(rawPerimeter);
+            const sourceId = processedPerimeter.properties.sourceId;
+            try {
+                const perimeterExists = (await getPerimeters({ sourceId })).length;
+
+                if (perimeterExists) {
+                    console.log(
+                    );
+                    await updatePerimeter(sourceId, processedPerimeter);
+                    updated++;
+                } else {
+                    await addPerimeter(processedPerimeter);
+                    added++;
+                }
+            } catch (error) {
+                failed.push(processedPerimeter.properties.name)
+                console.error(`Error processing perimeter ${sourceId}:`, error);
+            }
+        }
+
+        console.log(`Added ${added} perimeters and Updated ${updated} perimeters`)
+        if (failed.length) console.log(`Failed to proccess ${failed.length} perimeters: ${failed}`)
+        await cleanupOldPerimeters();
+        await removeDuplicatePerimeters();
+        return { added, updated };
     } catch (error) {
         console.error('Error renewing perimeters:', error);
         throw error;
@@ -122,11 +147,51 @@ export const validatePolygon = function (coordinates) {
     }
 };
 
+export const processPerimeter = rawPerimeter => {
+    const processedPerimeter = rawPerimeter;
+    rawPerimeter.properties = {
+        sourceId: rawPerimeter.properties.attr_UniqueFireIdentifier,
+        name: fixName(),
+        lastUpdated: new Date(rawPerimeter.properties.poly_DateCurrent)
+    }
+
+    return processedPerimeter;
+
+    function fixName() {
+        let newName = rawPerimeter.properties.poly_IncidentName.trim()
+            .toLowerCase()
+            .replace(/\b\w/g, c => c.toUpperCase());
+
+        // Add Fire to name if there is no good incident descriptor
+        if (!/(Fire|Rx|Pb|Prep|Piles|Tree Removal|Complex)\b/.test(newName)) {
+            newName += ' Fire';
+        }
+
+        // Check for and clarify prescribed burn jargon
+        if (/(Rx|Bp|Pb|Prep|Piles)\b/.test(newName)) {
+            newName = newName.replace(/Pb|Rx|Bp/g, match => {
+                switch (match) {
+                    case 'Pb':
+                        return 'Prescribed Burn';
+                    case 'Rx':
+                        return 'Prescribed Burn';
+                    case 'Bp':
+                        return 'Burn Piles';
+                    default:
+                        return match;
+                }
+            });
+        }
+
+        return newName;
+    }
+};
+
 export const fetchPerimeters = async () => {
     // Fire Perimeter Data from NIFC
     // Visit https://nifc.maps.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824
     const perimeterUrl =
-        'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName&f=pgeojson&token=';
+        'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName,poly_DateCurrent,attr_UniqueFireIdentifier&f=pgeojson';
 
     try {
         const perimeters = await (await fetch(perimeterUrl)).json();
@@ -136,5 +201,74 @@ export const fetchPerimeters = async () => {
     } catch (err) {
         console.error('Error fetching perimeter data:', err);
         throw err;
+    }
+};
+
+// Clean up old perimeters that haven't been updated
+export const cleanupOldPerimeters = async (daysThreshold = 90) => {
+    try {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+
+        const result = await Perimeter.deleteMany({
+            'properties.lastUpdated': { $lt: cutoffDate },
+        });
+
+        console.log(
+            `Cleaned up ${result.deletedCount} old perimeters (older than ${daysThreshold} months)`
+        );
+        return result;
+    } catch (error) {
+        console.error('Error cleaning up old perimeters:', error);
+        throw error;
+    }
+};
+
+// Remove duplicate perimeters with the same sourceId (keeping the most recent)
+export const removeDuplicatePerimeters = async () => {
+    try {
+        // Find duplicates by grouping by sourceId
+        const duplicates = await Perimeter.aggregate([
+            {
+                $group: {
+                    _id: '$properties.sourceId',
+                    count: { $sum: 1 },
+                    docs: { $push: '$$ROOT' },
+                },
+            },
+            {
+                $match: {
+                    count: { $gt: 1 },
+                },
+            },
+        ]);
+
+        let deletedCount = 0;
+
+        // For each group of duplicates, keep the most recent and delete others
+        for (const group of duplicates) {
+            // Sort by newest first
+            group.docs.sort(
+                (a, b) =>
+                    new Date(b.properties.lastUpdated) -
+                    new Date(a.properties.lastUpdated)
+            );
+
+            // Keep the first (most recent) and delete the rest
+            const idsToDelete = group.docs.slice(1).map(doc => doc._id);
+
+            if (idsToDelete.length > 0) {
+                const result = await Perimeter.deleteMany({
+                    _id: { $in: idsToDelete },
+                });
+                deletedCount += result.deletedCount;
+            }
+        }
+
+        console.log(`Removed ${deletedCount} duplicate perimeters`);
+        return { deletedCount };
+    } catch (error) {
+        console.error('Error removing duplicate perimeters:', error);
+        throw error;
     }
 };

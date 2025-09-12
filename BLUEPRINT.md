@@ -1,5 +1,5 @@
 # 🗺️ PROJECT BLUEPRINT
-*Generated Sep 11, 2025, 02:56 PM PDT*
+*Generated Sep 12, 2025, 03:46 PM PDT*
 
 ## Overview
 
@@ -39,6 +39,7 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
 📄 package.json
 📁 public
   📄 favicon.ico
+  📄 fire-huge.png
   📄 fire-large.png
   📄 fire-medium.png
   📄 fire-small.png
@@ -53,7 +54,7 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
     📄 feed.js
     📄 fire.js
     📄 map-data.js
-    📄 perimeters.js
+    📄 perimeter.js
   📁 middleware
     📄 database.js
   📁 models
@@ -226,9 +227,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (map.value) {
-    map.value.remove();
-  }
+  map.value.remove();
 });
 
 function initializeMap() {
@@ -257,7 +256,8 @@ async function loadIcons() {
   const icons = [
      { url: '/fire-small.png', name: 'fire-small' },
      { url: '/fire-medium.png', name: 'fire-medium' },
-     { url: '/fire-large.png', name: 'fire-large' }
+     { url: '/fire-large.png', name: 'fire-large' },
+     { url: '/fire-huge.png', name: 'fire-huge' }
   ];
 
   const loadPromises = icons.map(icon => {
@@ -287,10 +287,7 @@ function addFireLayer() {
     features: fires.value.map(fire => ({
       type: 'Feature',
       geometry: fire.geometry,
-      properties: {
-        ...fire.properties,
-        iconSize: fire.properties.area < 10000 ? 'small' : 'large'
-      }
+      properties: fire.properties,
     }))
   };
 
@@ -310,9 +307,10 @@ function addFireLayer() {
         'case',
         ['<', ['get', 'area'], 1000], 'fire-small',
         ['<', ['get', 'area'], 10000], 'fire-medium',
-        'fire-large'
+        ['<', ['get', 'area'], 100000], 'fire-large',
+        'fire-huge'
       ],
-      'icon-size': 0.25,
+      'icon-size': 0.1,
       'icon-allow-overlap': true
     }
   });
@@ -321,7 +319,6 @@ function addFireLayer() {
 }
 
 function addMapInteractivity() {
-  // Add click handler
   map.value.on('click', 'fire-points', (e) => {
     // Remove any existing popups
     document.querySelectorAll('.mapboxgl-popup').forEach(popup => popup.remove());
@@ -336,7 +333,6 @@ function addMapInteractivity() {
       .addTo(map.value);
   });
 
-  // Change cursor on hover
   map.value.on('mouseenter', 'fire-points', () => {
     map.value.getCanvas().style.cursor = 'pointer';
   });
@@ -394,6 +390,26 @@ function createPopupContent(feature) {
 }
 
 .mapboxgl-popup-tip {
+  border-bottom-color: var(--color-base-200) !important;
+  opacity: 90%;
+}
+
+.mapboxgl-popup-close-button {
+  height: 16px;
+  width: 16px;
+  margin-right: 10px;
+  margin-top: 10px;
+  background-color: var(--color-base-200);
+}
+
+.error-banner {
+  z-index: 100;
+  position: fixed;
+  background-color: firebrick;
+  /* margin-top: 50px; */
+}
+</style>
+
 ```
 
 ### ./app/components/FireFeed.vue
@@ -420,10 +436,10 @@ function createPopupContent(feature) {
             <tr v-for="(point, i) in points" :key="point._id">
               <th>{{ i + 1 }}</th>
               <td>{{ point.properties.name }}</td>
-              <td>{{ point.properties.area?.toLocaleString('en') || 'N/A' }}</td>
-              <td>{{ point.properties.status }}</td>
+              <td>{{ point.properties.area?.toLocaleString('en') }}</td>
+              <td>{{ point.properties.fireType == 'RX' ? 'Prescribed' : point.properties.status }}</td>
               <td>{{ getContainment(point.properties) }}</td>
-              <td>{{ point.properties.cause }}</td>
+              <td>{{ point.properties.fireType == 'RX' ? 'Prescribed' : point.properties.cause || 'Unknown' }}</td>
               <td>{{ fixDate(point.properties.discoveredAt) }}</td>
             </tr>
           </tbody>
@@ -461,7 +477,7 @@ function createPopupContent(feature) {
   }
   
   function getContainment(point) {
-    if (point.status == 'Prescribed') return 'N/A';
+    if (point.status == 'Prescribed') return '100%';
     if (point.containment !== null && point.containment !== undefined) return point.containment + '%';
     return 'Unknown';
   }
@@ -501,35 +517,19 @@ button {
 ### ./app/components/NavBar.vue
 ```javascript
 <template>
+
   <nav class="bg-base-200 flex items-center p-4">
-    <button 
-      :class="{ 'active-tab': activeTab === 'map', 'inactive-tab': activeTab !== 'map' }" 
-      @click="switchTab('map')"
-    >
-      Fire Finder
-    </button>
-    <button 
-      :class="{ 'active-tab': activeTab === 'feed', 'inactive-tab': activeTab !== 'feed' }" 
-      @click="switchTab('feed')"
-    >
-      Feed
-    </button>
-    <button 
-      :class="{ 'active-tab': activeTab === 'help', 'inactive-tab': activeTab !== 'help' }" 
-      @click="switchTab('help')"
-    >
-      Help
-    </button>
-    <button 
-      :class="{ 'active-tab': activeTab === 'profile', 'inactive-tab': activeTab !== 'profile' }" 
-      @click="switchTab('profile')"
-    >
-      Profile
-    </button>
+    <button :class="{ active: activeTab === 'map'}" @click="switchTab('map')">Fire Finder</button>
+    <button :class="{ active: activeTab === 'feed'}" @click="switchTab('feed')">Feed</button>
+    <button :class="{ active: activeTab === 'help'}" @click="switchTab('help')">Help</button>
+    <button :class="{ active: activeTab === 'profile'}" @click="switchTab('profile')">Profile</button>
   </nav>
+
 </template>
 
+
 <script setup>
+
 defineProps({
   activeTab: {
     type: String,
@@ -541,9 +541,11 @@ const emit = defineEmits(['switch-tab']);
 function switchTab(tab) {
   emit('switch-tab', tab);
 }
+
 </script>
 
-<style scoped>
+
+<style>
 nav {
   display: flex;
   gap: 1rem;
@@ -558,22 +560,19 @@ button {
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
   transition: all 0.2s ease;
-}
-
-.active-tab {
-  background-color: #ff5722;
-  color: white;
-  font-weight: bold;
-}
-
-.inactive-tab {
   background: none;
   color: #ccc;
 }
 
-.inactive-tab:hover {
+button:hover {
   background-color: #333;
   color: white;
+}
+
+button.active {
+  background-color: #ff5722;
+  color: white;
+  font-weight: bold;
 }
 </style>
 
@@ -614,7 +613,7 @@ async function renewFires() {
   response.value = null;
 
   try {
-    const res = await fetch('/api/fires', {
+    const res = await fetch('/api/fire', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'renew' })
@@ -639,7 +638,7 @@ async function renewPerimeters() {
   response.value = null;
 
   try {
-    const res = await fetch('/api/perimeters', {
+    const res = await fetch('/api/perimeter', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'renew' })
@@ -686,6 +685,11 @@ const fireSchema = new Schema({
       // fireId: Number,
       sourceId: String,
       name: String,
+      fireType: String,
+      landmark: String,
+      state: String,
+      county: String,
+      agency: String,
       discoveredAt: Date,
       lastUpdated: Date,
       status: String,
@@ -775,6 +779,88 @@ export default defineEventHandler(async event => {
         });
     } catch (error) {
         console.error('Error in fires API:', error);
+        return createError({
+            statusCode: 500,
+            statusMessage: 'Internal Server Error',
+            data: error.message,
+        });
+    }
+});
+
+```
+
+### ./server/api/perimeter.js
+```javascript
+import { defineEventHandler, readBody, getQuery } from 'h3';
+import {
+    getPerimeters,
+    addPerimeter,
+    updatePerimeter,
+    deletePerimeter,
+    renewPerimeters,
+} from '../utils/perimeterHandler';
+
+export default defineEventHandler(async event => {
+    try {
+        const queryParams = getQuery(event);
+
+        // GET /api/perimeter
+        if (event.method === 'GET') {
+            const perimeters = await getPerimeters(queryParams);
+            return { statusCode: 200, data: perimeters };
+        }
+
+        // POST /api/perimeter
+        if (event.method === 'POST') {
+            const body = await readBody(event);
+
+            if (body.action === 'renew') {
+                const result = await renewPerimeters();
+                return { statusCode: 200, data: result };
+            }
+
+            const newPerimeter = await addPerimeter(body);
+            return { statusCode: 201, data: newPerimeter };
+        }
+
+        // PUT /api/perimeter
+        if (event.method === 'PUT') {
+            const body = await readBody(event);
+
+            if (!body.sourceId) {
+                return createError({
+                    statusCode: 400,
+                    statusMessage: 'sourceId is required',
+                });
+            }
+
+            const updatedPerimeter = await updatePerimeter(body.sourceId, body);
+            return { statusCode: 200, data: updatedPerimeter };
+        }
+
+        // DELETE /api/perimeter
+        if (event.method === 'DELETE') {
+            if (Object.keys(queryParams).length === 0) {
+                return createError({
+                    statusCode: 400,
+                    statusMessage:
+                        'At least one filter parameter is required for deletion',
+                });
+            }
+
+            const result = await deletePerimeter(queryParams);
+            return {
+                statusCode: 200,
+                data: { deletedCount: result.deletedCount },
+            };
+        }
+
+        return createError({
+            statusCode: 405,
+            statusMessage: 'Method Not Allowed',
+        });
+    } catch (error) {
+        console.error('Error in perimeters API:', error);
         return createError({
             statusCode: 500,
             statusMessage: 'Internal Server Error',
@@ -877,7 +963,7 @@ const mapQuery = apiQuery => {
 
     if (apiQuery.minLastUpdated) {
         dbQuery['properties.lastUpdated'] = {
-            $gte: apiQuery.minLastUpdated
+            $gte: apiQuery.minLastUpdated,
         };
     }
 
@@ -940,21 +1026,23 @@ export const updateFire = async (sourceId, updateData) => {
 // Delete fires
 export const deleteFire = async (apiQuery = {}) => {
     try {
-      const dbQuery = mapQuery(apiQuery)
-      
-      // Safety check - don't allow empty queries that would delete all documents
-      if (Object.keys(dbQuery).length === 0) {
-        throw new Error('Delete query must include at least one filter parameter')
-      }
-      
-      const result = await FirePoint.deleteMany(dbQuery)
-      console.log(`Deleted ${result.deletedCount} fire(s)`)
-      return result
+        const dbQuery = mapQuery(apiQuery);
+
+        // Safety check - don't allow empty queries that would delete all documents
+        if (Object.keys(dbQuery).length === 0) {
+            throw new Error(
+                'Delete query must include at least one filter parameter'
+            );
+        }
+
+        const result = await FirePoint.deleteMany(dbQuery);
+        console.log(`Deleted ${result.deletedCount} fire(s)`);
+        return result;
     } catch (error) {
-      console.error('Error deleting fire(s):', error)
-      throw error
+        console.error('Error deleting fire(s):', error);
+        throw error;
     }
-  }
+};
 
 // Renew fire data
 export const renewFires = async () => {
@@ -966,11 +1054,12 @@ export const renewFires = async () => {
         for (const rawFire of fireData) {
             const processedFire = processFire(rawFire);
             const sourceId = processedFire.properties.sourceId;
-
             try {
-                const existingFire = await getFires({ sourceId })
+                const fireExists = (await getFires({ sourceId })).length;
 
-                if (existingFire) {
+                if (fireExists) {
+                    console.log(
+                    );
                     await updateFire(sourceId, processedFire);
                     updated++;
                 } else {
@@ -982,7 +1071,9 @@ export const renewFires = async () => {
             }
         }
 
-        console.log(`Added ${added} fires and Updated ${updated} fires`);
+        console.log(`Added ${added} fires and Updated ${updated} fires`)
+        await cleanupOldFires();
+        await removeDuplicateFires();
         return { added, updated };
     } catch (error) {
         console.error('Error renewing fires:', error);
@@ -993,7 +1084,7 @@ export const renewFires = async () => {
 // Fetch fire points from NIFC API
 export const fetchFirePoints = async () => {
     const firePointUrl =
-        'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query?where=1%3D1&outFields=FinalAcres%2CIncidentSize%2CSourceOID%2CIncidentName%2CPercentContained%2CIncidentSize%2CFireBehaviorGeneral%2CFireCause%2CFireDiscoveryDateTime%2CFireBehaviorGeneral3%2CFireBehaviorGeneral2%2CFireBehaviorGeneral1&f=pgeojson&token=';
+        'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query?where=1%3D1&outFields=FinalAcres,IncidentName,PercentContained,IncidentSize,FireBehaviorGeneral,FireCause,FireDiscoveryDateTime,FireBehaviorGeneral3,FireBehaviorGeneral2,FireBehaviorGeneral1,UniqueFireIdentifier,IncidentTypeCategory,IncidentShortDescription,POOState,POOCounty,POOJurisdictionalAgency,ModifiedOnDateTime_dt&f=pgeojson&token=';
 
     try {
         const firePoints = await (await fetch(firePointUrl)).json();
@@ -1008,14 +1099,18 @@ export const fetchFirePoints = async () => {
 // Process raw fire data
 export const processFire = rawPoint => {
     let prescribed = false;
-
     const processedPoint = {
         geometry: { type: 'Point', coordinates: rawPoint.geometry.coordinates },
         properties: {
-            sourceId: rawPoint.properties.SourceOID,
+            sourceId: rawPoint.properties.UniqueFireIdentifier,
             name: fixName(),
+            fireType: rawPoint.properties.IncidentTypeCategory,
+            landmark: rawPoint.properties.IncidentShortDescription,
+            state: rawPoint.properties.POOState,
+            county: rawPoint.properties.POOCounty,
+            agency: rawPoint.properties.POOJurisdictionalAgency,
             discoveredAt: new Date(rawPoint.properties.FireDiscoveryDateTime),
-            lastUpdated: Date.now(),
+            lastUpdated: new Date(rawPoint.properties.ModifiedOnDateTime_dt),
             status: fixStatus(),
             area: rawPoint.properties.IncidentSize,
             containment: rawPoint.properties.PercentContained,
@@ -1058,6 +1153,300 @@ export const processFire = rawPoint => {
 
     function fixStatus() {
         const behaviors = [
+            rawPoint.properties.FireBehaviorGeneral,
+            rawPoint.properties.FireBehaviorGeneral1,
+            rawPoint.properties.FireBehaviorGeneral2,
+            rawPoint.properties.FireBehaviorGeneral3,
+        ];
+
+        let newStatus = [...new Set(behaviors)]
+            .filter(behavior => behavior !== null)
+            .join(', ');
+
+        if (!newStatus) {
+            if (prescribed) return 'Prescribed';
+            return null;
+        }
+
+        return newStatus;
+    }
+};
+
+// Clean up old fires that haven't been updated
+export const cleanupOldFires = async (daysThreshold = 90) => {
+    try {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+
+        const result = await FirePoint.deleteMany({
+            'properties.lastUpdated': { $lt: cutoffDate },
+        });
+
+        console.log(
+            `Cleaned up ${result.deletedCount} old fires (older than ${daysThreshold} months)`
+        );
+        return result;
+    } catch (error) {
+        console.error('Error cleaning up old fires:', error);
+        throw error;
+    }
+};
+
+// Remove duplicate fires with the same sourceId (keeping the most recent)
+export const removeDuplicateFires = async () => {
+    try {
+        // Find duplicates by grouping by sourceId
+        const duplicates = await FirePoint.aggregate([
+            {
+                $group: {
+                    _id: '$properties.sourceId',
+                    count: { $sum: 1 },
+                    docs: { $push: '$$ROOT' },
+                },
+            },
+            {
+                $match: {
+                    count: { $gt: 1 },
+                },
+            },
+        ]);
+
+        let deletedCount = 0;
+
+        // For each group of duplicates, keep the most recent and delete others
+        for (const group of duplicates) {
+            // Sort by newest first
+            group.docs.sort(
+                (a, b) =>
+                    new Date(b.properties.lastUpdated) -
+                    new Date(a.properties.lastUpdated)
+            );
+
+            // Keep the first (most recent) and delete the rest
+            const idsToDelete = group.docs.slice(1).map(doc => doc._id);
+
+            if (idsToDelete.length > 0) {
+                const result = await FirePoint.deleteMany({
+                    _id: { $in: idsToDelete },
+                });
+                deletedCount += result.deletedCount;
+            }
+        }
+
+        console.log(`Removed ${deletedCount} duplicate fires`);
+        return { deletedCount };
+    } catch (error) {
+        console.error('Error removing duplicate fires:', error);
+        throw error;
+    }
+};
+
+```
+
+### ./server/utils/perimeterHandler.js
+```javascript
+import Perimeter from '../models/Perimeter';
+
+// Map API query parameters to database field names
+const mapApiQueryToDbQuery = apiQuery => {
+    const dbQuery = {};
+
+    if (apiQuery.sourceId) {
+        dbQuery['properties.sourceId'] = apiQuery.sourceId;
+    }
+
+    if (apiQuery.status) {
+        dbQuery['properties.status'] = apiQuery.status;
+    }
+
+    return dbQuery;
+};
+
+// Get perimeters based on API query parameters
+export const getPerimeters = async (apiQuery = {}) => {
+    try {
+        const dbQuery = mapApiQueryToDbQuery(apiQuery);
+        const perimeters = await Perimeter.find(dbQuery);
+        return perimeters;
+    } catch (error) {
+        console.error('Error getting perimeters:', error);
+        throw error;
+    }
+};
+
+// Add a new perimeter
+export const addPerimeter = async perimeterData => {
+    try {
+        const newPerimeter = new Perimeter(perimeterData);
+        const savedPerimeter = await newPerimeter.save();
+        console.log(`Added perimeter: ${savedPerimeter.properties.name}`);
+        return savedPerimeter;
+    } catch (error) {
+        console.error('Error adding perimeter:', error);
+        throw error;
+    }
+};
+
+// Update a perimeter by sourceId
+export const updatePerimeter = async (sourceId, updateData) => {
+    try {
+        const updatedPerimeter = await Perimeter.findOneAndUpdate(
+            { 'properties.sourceId': sourceId },
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedPerimeter) {
+            throw new Error('Perimeter not found');
+        }
+
+        console.log(`Updated perimeter: ${updatedPerimeter.properties.name}`);
+        return updatedPerimeter;
+    } catch (error) {
+        console.error('Error updating perimeter:', error);
+        throw error;
+    }
+};
+
+// Delete perimeters based on API query parameters
+export const deletePerimeter = async (apiQuery = {}) => {
+    try {
+        const dbQuery = mapApiQueryToDbQuery(apiQuery);
+
+        // Safety check - don't allow empty queries
+        if (Object.keys(dbQuery).length === 0) {
+            throw new Error(
+                'Delete query must include at least one filter parameter'
+            );
+        }
+
+        const result = await Perimeter.deleteMany(dbQuery);
+        console.log(`Deleted ${result.deletedCount} perimeter(s)`);
+        return result;
+    } catch (error) {
+        console.error('Error deleting perimeter(s):', error);
+        throw error;
+    }
+};
+
+// Renew perimeter data from external source
+export const renewPerimeters = async () => {
+    try {
+        const perimeterData = await fetchPerimeters();
+        let added = 0,
+            updated = 0;
+
+        for (const rawPerimeter of perimeterData) {
+            const processedPerimeter = processPerimeter(rawPerimeter);
+            const sourceId = processedPerimeter.properties.sourceId;
+            try {
+                const perimeterExists = (await getPerimeters({ sourceId })).length;
+
+                if (perimeterExists) {
+                    console.log(
+                    );
+                    await updatePerimeter(sourceId, processedPerimeter);
+                    updated++;
+                } else {
+                    await addPerimeter(processedPerimeter);
+                    added++;
+                }
+            } catch (error) {
+                console.error(`Error processing fire ${sourceId}:`, error);
+            }
+        }
+
+        console.log(`Added ${added} perimeters and Updated ${updated} perimeters`)
+        // await cleanupOldFires();
+        // await removeDuplicateFires();
+        return { added, updated };
+    } catch (error) {
+        console.error('Error renewing perimeters:', error);
+        throw error;
+    }
+};
+
+export const validatePolygon = function (coordinates) {
+    const ring = coordinates[0];
+
+    if (ring.length < 4) {
+        throw new Error('Polygon must have at least 4 points');
+    }
+
+    const [x1, y1] = ring[0];
+    const [x2, y2] = ring[ring.length - 1];
+    if (x1 !== x2 || y1 !== y2) {
+        throw new Error('Polygon is not closed');
+    }
+
+    const seen = new Set();
+    for (const [x, y] of ring) {
+        const key = `${x},${y}`;
+        const first = `${x1},${y1}`;
+        const last = `${x2},${y2}`;
+        if (seen.has(key) && key !== first && key !== last) {
+            throw new Error(`Duplicate vertex found: ${x},${y}`);
+        }
+        seen.add(key);
+    }
+};
+
+export const processPerimeter = rawPerimeter => {
+    const processedPerimeter = rawPerimeter;
+    rawPerimeter.properties = {
+        sourceId: rawPerimeter.properties.attr_UniqueFireIdentifier,
+        name: fixName(),
+    }
+
+    return processedPerimeter;
+
+    function fixName() {
+        let newName = rawPerimeter.properties.poly_IncidentName.trim()
+            .toLowerCase()
+            .replace(/\b\w/g, c => c.toUpperCase());
+
+        // Add Fire to name if there is no good incident descriptor
+        if (!/(Fire|Rx|Pb|Prep|Piles|Tree Removal|Complex)\b/.test(newName)) {
+            newName += ' Fire';
+        }
+
+        // Check for and clarify prescribed burn jargon
+        if (/(Rx|Bp|Pb|Prep|Piles)\b/.test(newName)) {
+            newName = newName.replace(/Pb|Rx|Bp/g, match => {
+                switch (match) {
+                    case 'Pb':
+                        return 'Prescribed Burn';
+                    case 'Rx':
+                        return 'Prescribed Burn';
+                    case 'Bp':
+                        return 'Burn Piles';
+                    default:
+                        return match;
+                }
+            });
+        }
+
+        return newName;
+    }
+};
+
+export const fetchPerimeters = async () => {
+    // Fire Perimeter Data from NIFC
+    // Visit https://nifc.maps.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824
+    const perimeterUrl =
+        'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName,attr_UniqueFireIdentifier&f=pgeojson';
+
+    try {
+        const perimeters = await (await fetch(perimeterUrl)).json();
+        let perimeterCount = perimeters.features.length;
+        console.log(`Fetched ${perimeterCount} Fire Perimeters`);
+        return perimeters.features;
+    } catch (err) {
+        console.error('Error fetching perimeter data:', err);
+        throw err;
+    }
+};
+
 ```
 
 ### ./server/utils/db.js

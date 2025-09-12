@@ -31,7 +31,7 @@ async function renewFires() {
   response.value = null;
 
   try {
-    const res = await fetch('/api/fires', {
+    const res = await fetch('/api/fire', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'renew' })
@@ -56,7 +56,7 @@ async function renewPerimeters() {
   response.value = null;
 
   try {
-    const res = await fetch('/api/perimeters', {
+    const res = await fetch('/api/perimeter', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'renew' })

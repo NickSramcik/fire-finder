@@ -20,10 +20,10 @@
             <tr v-for="(point, i) in points" :key="point._id">
               <th>{{ i + 1 }}</th>
               <td>{{ point.properties.name }}</td>
-              <td>{{ point.properties.area?.toLocaleString('en') || 'N/A' }}</td>
-              <td>{{ point.properties.status }}</td>
+              <td>{{ point.properties.area?.toLocaleString('en') }}</td>
+              <td>{{ point.properties.fireType == 'RX' ? 'Prescribed' : point.properties.status }}</td>
               <td>{{ getContainment(point.properties) }}</td>
-              <td>{{ point.properties.cause }}</td>
+              <td>{{ point.properties.fireType == 'RX' ? 'Prescribed' : point.properties.cause || 'Unknown' }}</td>
               <td>{{ fixDate(point.properties.discoveredAt) }}</td>
             </tr>
           </tbody>
@@ -61,7 +61,7 @@
   }
   
   function getContainment(point) {
-    if (point.status == 'Prescribed') return 'N/A';
+    if (point.status == 'Prescribed') return '100%';
     if (point.containment !== null && point.containment !== undefined) return point.containment + '%';
     return 'Unknown';
   }
