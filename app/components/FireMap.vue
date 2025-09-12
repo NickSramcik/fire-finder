@@ -59,7 +59,8 @@ async function loadIcons() {
   const icons = [
      { url: '/fire-small.png', name: 'fire-small' },
      { url: '/fire-medium.png', name: 'fire-medium' },
-     { url: '/fire-large.png', name: 'fire-large' }
+     { url: '/fire-large.png', name: 'fire-large' },
+     { url: '/fire-huge.png', name: 'fire-huge' }
   ];
 
   const loadPromises = icons.map(icon => {
@@ -89,10 +90,7 @@ function addFireLayer() {
     features: fires.value.map(fire => ({
       type: 'Feature',
       geometry: fire.geometry,
-      properties: {
-        ...fire.properties,
-        iconSize: fire.properties.area < 10000 ? 'small' : 'large'
-      }
+      properties: fire.properties,
     }))
   };
 
@@ -112,9 +110,10 @@ function addFireLayer() {
         'case',
         ['<', ['get', 'area'], 1000], 'fire-small',
         ['<', ['get', 'area'], 10000], 'fire-medium',
-        'fire-large'
+        ['<', ['get', 'area'], 100000], 'fire-large',
+        'fire-huge'
       ],
-      'icon-size': 0.25,
+      'icon-size': 0.1,
       'icon-allow-overlap': true
     }
   });
