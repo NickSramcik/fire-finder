@@ -1,8 +1,5 @@
 import mongoose from 'mongoose';
 
-// Remove the isConnected check as it can cause issues with connection pooling
-// and doesn't work well in serverless environments
-
 export const connectDB = async () => {
   try {
     const dbUri = process.env.MONGODB_URI;
@@ -11,10 +8,7 @@ export const connectDB = async () => {
       throw new Error('MONGODB_URI environment variable is not defined');
     }
 
-    // Use more robust connection options
-    const db = await mongoose.connect(dbUri, {
-      useNewUrlParser: true,
-    });
+    const db = await mongoose.connect(dbUri);
 
     console.log('MongoDB connected successfully');
     return db;
@@ -23,11 +17,6 @@ export const connectDB = async () => {
     throw error;
   }
 };
-
-// Handle connection events
-mongoose.connection.on('connected', () => {
-  console.log('Mongoose connected to DB');
-});
 
 mongoose.connection.on('error', (err) => {
   console.error('Mongoose connection error:', err);

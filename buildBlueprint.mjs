@@ -30,6 +30,8 @@ const CONFIG = {
         './server/utils/fireHandler.js',
         './server/utils/perimeterHandler.js',
         './server/utils/db.js',
+        './server/utils/cache.js',
+        './server/plugins/database.js',
         './server/middleware/database.js',
         './.github/workflows/fly-deploy.yml',
     ]

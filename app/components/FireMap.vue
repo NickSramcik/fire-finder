@@ -8,25 +8,63 @@ mapboxgl.accessToken = config.public.mapboxToken;
 if (!mapboxgl.accessToken) console.error('Mapbox Token missing!');
 
 const map = ref(null);
-const mapInitialized = ref(false);
+const loading = ref(true);
+const error = ref(null);
+
+// Data storage
+const fires = ref([]);
+const perimeters = ref([]);
 
 // Calculate date for filtering (last 3 months)
 const threeMonthsAgo = new Date();
 threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-// Build query parameters for server-side filtering
+// Build query parameters
 const queryParams = new URLSearchParams({
-  minLastUpdated: threeMonthsAgo.toISOString(),
+  // minLastUpdated: threeMonthsAgo.toISOString(),
   hasArea: 'true'
 });
 
-// Fetch fires
-const { data: mapData, error } = await useFetch(`/api/map-data?${queryParams}`);
-const fires = computed(() => mapData.value?.fires || []);
-const perimeters = computed(() => mapData.value?.perimeters || []);
+async function fetchMapData() {
+  try {
+    loading.value = true;
+    error.value = null;
+    
+    // Use $fetch instead of useFetch for more control
+    const mapData = await $fetch(`/api/map-data?${queryParams}`, {
+      timeout: 5000,
+      retry: 1,
+      retryDelay: 100
+    });
+    
+    // Check if we actually got data
+    if (!mapData || 
+        (!mapData.fires && !mapData.perimeters) ||
+        (Array.isArray(mapData.fires) && mapData.fires.length === 0 && 
+         Array.isArray(mapData.perimeters) && mapData.perimeters.length === 0)) {
+      throw new Error('No data received from server');
+    }
+    
+    fires.value = mapData.fires || [];
+    perimeters.value = mapData.perimeters || [];
+    loading.value = false;
+    return true;
+  } catch (err) {
+    error.value = err;
+    console.error("Error fetching map data:", err);
+    loading.value = false;
+    return false;
+  }
+}
+
+// Initialize map after data is loaded
+async function launchMap() {
+  await fetchMapData();
+  initializeMap();
+}
 
 onMounted(() => {
-  initializeMap();
+  launchMap();
 });
 
 onUnmounted(() => {
@@ -210,8 +248,8 @@ function createPopupContent(feature) {
     <div v-if="error" class="error-banner">
       Error loading fire data: {{ error.message }}
     </div>
-    <div v-if="!mapInitialized" class="loading-overlay">
-      Loading map...
+    <div v-if="loading" class="loading-overlay">
+      Loading fire data...
     </div>
   </div>
 </template>

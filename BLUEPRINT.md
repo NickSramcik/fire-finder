@@ -1,5 +1,5 @@
 # 🗺️ PROJECT BLUEPRINT
-*Generated Sep 12, 2025, 03:46 PM PDT*
+*Generated Sep 19, 2025, 02:54 PM PDT*
 
 ## Overview
 
@@ -56,13 +56,15 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
     📄 map-data.js
     📄 perimeter.js
   📁 middleware
-    📄 database.js
   📁 models
     📄 Data.js
     📄 FirePoint.js
     📄 Perimeter.js
+  📁 plugins
+    📄 database.js
   📄 tsconfig.json
   📁 utils
+    📄 cache.js
     📄 db.js
     📄 fireHandler.js
     📄 perimeterHandler.js
@@ -205,25 +207,79 @@ mapboxgl.accessToken = config.public.mapboxToken;
 if (!mapboxgl.accessToken) console.error('Mapbox Token missing!');
 
 const map = ref(null);
-const mapInitialized = ref(false);
+const loading = ref(true);
+const error = ref(null);
+const retryCount = ref(0);
+const maxRetries = 3;
+
+// Data storage
+const fires = ref([]);
+const perimeters = ref([]);
 
 // Calculate date for filtering (last 3 months)
 const threeMonthsAgo = new Date();
 threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-// Build query parameters for server-side filtering
+// Build query parameters
 const queryParams = new URLSearchParams({
-  minLastUpdated: threeMonthsAgo.toISOString(),
+  // minLastUpdated: threeMonthsAgo.toISOString(),
   hasArea: 'true'
 });
 
-// Fetch fires
-const { data: mapData, error } = await useFetch(`/api/map-data?${queryParams}`);
-const fires = computed(() => mapData.value?.fires || []);
-const perimeters = computed(() => mapData.value?.perimeters || []);
+// Fetch data with retry logic
+async function fetchMapData() {
+  try {
+    loading.value = true;
+    error.value = null;
+    
+    // Use $fetch instead of useFetch for more control
+    const mapData = await $fetch(`/api/map-data?${queryParams}`, {
+      timeout: 5000,
+      retry: 1,
+      retryDelay: 100
+    });
+    
+    // Check if we actually got data
+    if (!mapData || 
+        (!mapData.fires && !mapData.perimeters) ||
+        (Array.isArray(mapData.fires) && mapData.fires.length === 0 && 
+         Array.isArray(mapData.perimeters) && mapData.perimeters.length === 0)) {
+      throw new Error('No data received from server');
+    }
+    
+    fires.value = mapData.fires || [];
+    perimeters.value = mapData.perimeters || [];
+    loading.value = false;
+    return true;
+  } catch (err) {
+    error.value = err;
+    console.error("Error fetching map data:", err);
+    
+    if (retryCount.value < maxRetries) {
+      retryCount.value++;
+      await new Promise(resolve => setTimeout(resolve, 300 * retryCount.value));
+      return fetchMapData();
+    }
+    
+    loading.value = false;
+    return false;
+  }
+}
+
+// Initialize map after data is loaded
+async function initializeAfterDataLoad() {
+  const success = await fetchMapData();
+  
+  if (success) {
+    initializeMap();
+  } else {
+    // Even if data loading failed, initialize empty map
+    initializeMap();
+  }
+}
 
 onMounted(() => {
-  initializeMap();
+  initializeAfterDataLoad();
 });
 
 onUnmounted(() => {
@@ -242,7 +298,8 @@ function initializeMap() {
     map.value.on('load', async () => {
        try {
          await loadIcons();
-         addFireLayer();
+         await addFireLayer();
+         await addPerimeterLayer();
        } catch (err) {
          console.error("Failed in map load event:", err);
        }
@@ -318,6 +375,50 @@ function addFireLayer() {
   addMapInteractivity();
 }
 
+function addPerimeterLayer() {
+  if (!map.value || !perimeters.value.length) {
+    console.log('No perimeter data available.');
+    return;
+  }
+
+  const perimeterData = {
+    type: 'FeatureCollection',
+    features: perimeters.value.map(perimeter => ({
+      type: 'Feature',
+      geometry: perimeter.geometry,
+      properties: perimeter.properties,
+    }))
+  };
+
+  // Add perimeter source
+  map.value.addSource('perimeters', {
+    type: 'geojson',
+    data: perimeterData
+  });
+  
+  // Add perimeter fill layer
+  map.value.addLayer({
+    id: 'perimeters-fill',
+    type: 'fill',
+    source: 'perimeters',
+    paint: {
+      'fill-color': '#ff5722',
+      'fill-opacity': 0.3
+    }
+  }, 'fire-points');
+  
+  // Add perimeter outline layer
+  map.value.addLayer({
+    id: 'perimeters-outline',
+    type: 'line',
+    source: 'perimeters',
+    paint: {
+      'line-color': '#ff5722',
+      'line-width': 2
+    }
+  }, 'fire-points');
+}
+
 function addMapInteractivity() {
   map.value.on('click', 'fire-points', (e) => {
     // Remove any existing popups
@@ -362,8 +463,8 @@ function createPopupContent(feature) {
     <div v-if="error" class="error-banner">
       Error loading fire data: {{ error.message }}
     </div>
-    <div v-if="!mapInitialized" class="loading-overlay">
-      Loading map...
+    <div v-if="loading" class="loading-overlay">
+      Loading fire data{{ retryCount > 0 ? ` (retry ${retryCount}/${maxRetries})` : '' }}...
     </div>
   </div>
 </template>
@@ -396,20 +497,6 @@ function createPopupContent(feature) {
 
 .mapboxgl-popup-close-button {
   height: 16px;
-  width: 16px;
-  margin-right: 10px;
-  margin-top: 10px;
-  background-color: var(--color-base-200);
-}
-
-.error-banner {
-  z-index: 100;
-  position: fixed;
-  background-color: firebrick;
-  /* margin-top: 50px; */
-}
-</style>
-
 ```
 
 ### ./app/components/FireFeed.vue
@@ -911,10 +998,27 @@ export default defineEventHandler(async event => {
 import { defineEventHandler, getQuery } from 'h3';
 import { getFires } from '../utils/fireHandler';
 import { getPerimeters } from '../utils/perimeterHandler';
+import { cache } from '../utils/cache';
+import mongoose from 'mongoose';
 
 export default defineEventHandler(async event => {
     try {
+        console.log('Map data request received - DB readyState:', mongoose.connection.readyState);
+        console.log('Registered models:', mongoose.modelNames());
+        console.log(
+            'Map data request received - DB readyState:',
+            mongoose.connection.readyState
+        );
         const query = getQuery(event);
+        const cacheKey = `map-data:${JSON.stringify(query)}`;
+
+        // Check cache first
+        const cached = cache.get(cacheKey);
+        if (cached) {
+            console.log('Using cache...');
+            return cached;
+        }
+
         const filters = {};
 
         if (query.minLastUpdated) {
@@ -930,7 +1034,12 @@ export default defineEventHandler(async event => {
             getPerimeters(),
         ]);
 
-        return { fires, perimeters };
+        const result = { fires, perimeters };
+
+        // Cache the result
+        cache.set(cacheKey, result);
+
+        return result;
     } catch (error) {
         console.error('Error fetching map data:', error);
         return createError({
@@ -1334,7 +1443,8 @@ export const renewPerimeters = async () => {
     try {
         const perimeterData = await fetchPerimeters();
         let added = 0,
-            updated = 0;
+            updated = 0,
+            failed = [];
 
         for (const rawPerimeter of perimeterData) {
             const processedPerimeter = processPerimeter(rawPerimeter);
@@ -1352,13 +1462,15 @@ export const renewPerimeters = async () => {
                     added++;
                 }
             } catch (error) {
-                console.error(`Error processing fire ${sourceId}:`, error);
+                failed.push(processedPerimeter.properties.name)
+                console.error(`Error processing perimeter ${sourceId}:`, error);
             }
         }
 
         console.log(`Added ${added} perimeters and Updated ${updated} perimeters`)
-        // await cleanupOldFires();
-        // await removeDuplicateFires();
+        if (failed.length) console.log(`Failed to proccess ${failed.length} perimeters: ${failed}`)
+        await cleanupOldPerimeters();
+        await removeDuplicatePerimeters();
         return { added, updated };
     } catch (error) {
         console.error('Error renewing perimeters:', error);
@@ -1396,6 +1508,7 @@ export const processPerimeter = rawPerimeter => {
     rawPerimeter.properties = {
         sourceId: rawPerimeter.properties.attr_UniqueFireIdentifier,
         name: fixName(),
+        lastUpdated: new Date(rawPerimeter.properties.poly_DateCurrent)
     }
 
     return processedPerimeter;
@@ -1434,7 +1547,7 @@ export const fetchPerimeters = async () => {
     // Fire Perimeter Data from NIFC
     // Visit https://nifc.maps.arcgis.com/home/item.html?id=d1c32af3212341869b3c810f1a215824
     const perimeterUrl =
-        'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName,attr_UniqueFireIdentifier&f=pgeojson';
+        'https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=poly_IncidentName,poly_DateCurrent,attr_UniqueFireIdentifier&f=pgeojson';
 
     try {
         const perimeters = await (await fetch(perimeterUrl)).json();
@@ -1444,6 +1557,75 @@ export const fetchPerimeters = async () => {
     } catch (err) {
         console.error('Error fetching perimeter data:', err);
         throw err;
+    }
+};
+
+// Clean up old perimeters that haven't been updated
+export const cleanupOldPerimeters = async (daysThreshold = 90) => {
+    try {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+
+        const result = await Perimeter.deleteMany({
+            'properties.lastUpdated': { $lt: cutoffDate },
+        });
+
+        console.log(
+            `Cleaned up ${result.deletedCount} old perimeters (older than ${daysThreshold} months)`
+        );
+        return result;
+    } catch (error) {
+        console.error('Error cleaning up old perimeters:', error);
+        throw error;
+    }
+};
+
+// Remove duplicate perimeters with the same sourceId (keeping the most recent)
+export const removeDuplicatePerimeters = async () => {
+    try {
+        // Find duplicates by grouping by sourceId
+        const duplicates = await Perimeter.aggregate([
+            {
+                $group: {
+                    _id: '$properties.sourceId',
+                    count: { $sum: 1 },
+                    docs: { $push: '$$ROOT' },
+                },
+            },
+            {
+                $match: {
+                    count: { $gt: 1 },
+                },
+            },
+        ]);
+
+        let deletedCount = 0;
+
+        // For each group of duplicates, keep the most recent and delete others
+        for (const group of duplicates) {
+            // Sort by newest first
+            group.docs.sort(
+                (a, b) =>
+                    new Date(b.properties.lastUpdated) -
+                    new Date(a.properties.lastUpdated)
+            );
+
+            // Keep the first (most recent) and delete the rest
+            const idsToDelete = group.docs.slice(1).map(doc => doc._id);
+
+            if (idsToDelete.length > 0) {
+                const result = await Perimeter.deleteMany({
+                    _id: { $in: idsToDelete },
+                });
+                deletedCount += result.deletedCount;
+            }
+        }
+
+        console.log(`Removed ${deletedCount} duplicate perimeters`);
+        return { deletedCount };
+    } catch (error) {
+        console.error('Error removing duplicate perimeters:', error);
+        throw error;
     }
 };
 
@@ -1479,7 +1661,11 @@ export const connectDB = async () => {
 
 // Handle connection events
 mongoose.connection.on('connected', () => {
-  console.log('Mongoose connected to DB');
+  console.log('Mongoose connected to DB - readyState:', mongoose.connection.readyState);
+});
+
+mongoose.connection.on('open', () => {
+  console.log('Mongoose connection is open and ready to use');
 });
 
 mongoose.connection.on('error', (err) => {
@@ -1498,44 +1684,53 @@ process.on('SIGINT', async () => {
 });
 ```
 
-### ./server/middleware/database.js
+### ./server/utils/cache.js
 ```javascript
-import { connectDB } from '../utils/db';
-import mongoose from 'mongoose';
-
-
-// Global connection variable
-let isConnecting = false;
-let connectionPromise = null;
-
-export default defineEventHandler(async event => {
-    // Only handle API routes
-    if (!event.path.startsWith('/api/')) {
-        return;
+class FireCache {
+    constructor() {
+        this.cache = new Map();
     }
 
-    try {
-        // Check if mongoose is already connected
-        if (mongoose.connection.readyState === 1) {
-            return; // Already connected
-        }
-
-        // Prevent multiple simultaneous connection attempts
-        if (!isConnecting) {
-            isConnecting = true;
-            connectionPromise = connectDB();
-        }
-
-        // Wait for connection to establish
-        await connectionPromise;
-        isConnecting = false;
-    } catch (error) {
-        console.error('Database connection failed:', error);
-        throw createError({
-            statusCode: 500,
-            statusMessage: 'Database connection failed',
+    set(key, value, ttl = 300000) {
+        // 5 minutes default
+        this.cache.set(key, {
+            value,
+            expiry: Date.now() + ttl,
         });
     }
+
+    get(key) {
+        const item = this.cache.get(key);
+        if (!item) return null;
+
+        if (Date.now() > item.expiry) {
+            this.cache.delete(key);
+            return null;
+        }
+
+        return item.value;
+    }
+
+    delete(key) {
+        this.cache.delete(key);
+    }
+}
+
+export const cache = new FireCache();
+
+```
+
+### ./server/plugins/database.js
+```javascript
+import { connectDB } from '../utils/db';
+
+export default defineNitroPlugin(async () => {
+  try {
+    await connectDB();
+    console.log('Database connected successfully on startup');
+  } catch (error) {
+    console.error('Failed to connect to database on startup:', error);
+  }
 });
 
 ```
