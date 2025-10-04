@@ -1,36 +1,27 @@
 import { defineEventHandler, readBody, getQuery } from 'h3';
-import {
-    getPerimeters,
-    addPerimeter,
-    updatePerimeter,
-    deletePerimeter,
-    renewPerimeters,
-} from '../utils/perimeterHandler';
+import { perimeterService } from '../services/PerimeterService.js';
 
 export default defineEventHandler(async event => {
     try {
         const queryParams = getQuery(event);
 
-        // GET /api/perimeter
         if (event.method === 'GET') {
-            const perimeters = await getPerimeters(queryParams);
+            const perimeters = await perimeterService.find(queryParams);
             return { statusCode: 200, data: perimeters };
         }
 
-        // POST /api/perimeter
         if (event.method === 'POST') {
             const body = await readBody(event);
 
             if (body.action === 'renew') {
-                const result = await renewPerimeters();
+                const result = await perimeterService.renewPerimeters();
                 return { statusCode: 200, data: result };
             }
 
-            const newPerimeter = await addPerimeter(body);
+            const newPerimeter = await perimeterService.create(body);
             return { statusCode: 201, data: newPerimeter };
         }
 
-        // PUT /api/perimeter
         if (event.method === 'PUT') {
             const body = await readBody(event);
 
@@ -41,11 +32,13 @@ export default defineEventHandler(async event => {
                 });
             }
 
-            const updatedPerimeter = await updatePerimeter(body.sourceId, body);
+            const updatedPerimeter = await perimeterService.update(
+                body.sourceId,
+                body
+            );
             return { statusCode: 200, data: updatedPerimeter };
         }
 
-        // DELETE /api/perimeter
         if (event.method === 'DELETE') {
             if (Object.keys(queryParams).length === 0) {
                 return createError({
@@ -55,7 +48,7 @@ export default defineEventHandler(async event => {
                 });
             }
 
-            const result = await deletePerimeter(queryParams);
+            const result = await perimeterService.delete(queryParams);
             return {
                 statusCode: 200,
                 data: { deletedCount: result.deletedCount },

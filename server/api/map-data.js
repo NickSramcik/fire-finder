@@ -1,17 +1,10 @@
 import { defineEventHandler, getQuery } from 'h3';
-import { getFires } from '../utils/fireHandler';
-import { getPerimeters } from '../utils/perimeterHandler';
-import { cache } from '../utils/cache';
-import mongoose from 'mongoose';
+import { fireService } from '../services/FireService.js';
+import { perimeterService } from '../services/PerimeterService.js';
+import { cache } from '../utils/cache.js';
 
 export default defineEventHandler(async event => {
     try {
-        console.log('Map data request received - DB readyState:', mongoose.connection.readyState);
-        console.log('Registered models:', mongoose.modelNames());
-        console.log(
-            'Map data request received - DB readyState:',
-            mongoose.connection.readyState
-        );
         const query = getQuery(event);
         const cacheKey = `map-data:${JSON.stringify(query)}`;
 
@@ -33,8 +26,8 @@ export default defineEventHandler(async event => {
         }
 
         const [fires, perimeters] = await Promise.all([
-            getFires(filters),
-            getPerimeters(),
+            fireService.find(filters),
+            perimeterService.find(),
         ]);
 
         const result = { fires, perimeters };

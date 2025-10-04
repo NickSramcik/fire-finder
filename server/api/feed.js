@@ -1,16 +1,15 @@
-import { defineEventHandler } from 'h3';
-import { getFires } from '../utils/fireHandler';
+import { defineEventHandler, getQuery } from 'h3';
+import { fireService } from '../services/FireService.js'; // FIXED: Direct import
 
-// GET /api/feed - Get fire data for feed with optional sorting and filtering
 export default defineEventHandler(async event => {
     try {
         const query = getQuery(event);
 
-        let fires = await getFires(query);
+        let fires = await fireService.find(query);
 
         // Apply sorting (Largest to smallest by default)
         fires = fires.sort((a, b) => {
-            return b.properties.area - a.properties.area
+            return b.properties.area - a.properties.area;
         });
 
         // Apply limit if specified
