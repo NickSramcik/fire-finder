@@ -1,33 +1,64 @@
-import { perimeterRepository } from '../repositories/PerimeterRepository.js';
+import Perimeter from '../models/Perimeter.js';
 
 export class PerimeterService {
-    constructor(repository) {
-        this.repository = repository;
+    constructor() {
+        this.model = Perimeter;
     }
 
+    // Data Access Methods
     async find(query = {}) {
-        return this.repository.find(query);
+        const dbQuery = this.mapQuery(query);
+        let mongooseQuery = this.model.find(dbQuery);
+
+        if (query.limit) {
+            mongooseQuery = mongooseQuery.limit(parseInt(query.limit));
+        }
+
+        if (query.skip) {
+            mongooseQuery = mongooseQuery.skip(parseInt(query.skip));
+        }
+
+        // Default: most recent first
+        mongooseQuery = mongooseQuery.sort({ 'properties.lastUpdated': -1 });
+
+        return mongooseQuery.exec();
     }
 
     async findOne(sourceId) {
-        return this.repository.findOne(sourceId);
+        return this.model.findOne({ 'properties.sourceId': sourceId });
     }
 
     async create(perimeterData) {
-        return this.repository.create(perimeterData);
+        const newPerimeter = new this.model(perimeterData);
+        return newPerimeter.save();
     }
 
     async update(sourceId, updateData) {
-        return this.repository.update(sourceId, updateData);
+        return this.model.findOneAndUpdate(
+            { 'properties.sourceId': sourceId },
+            updateData,
+            { new: true, runValidators: true }
+        );
     }
 
     async delete(query = {}) {
-        return this.repository.delete(query);
+        const dbQuery = this.mapQuery(query);
+
+        if (Object.keys(dbQuery).length === 0) {
+            throw new Error('Delete query requires filters');
+        }
+
+        return this.model.deleteMany(dbQuery);
     }
 
+    // External Data Integration
     async renewPerimeters() {
         const perimeterData = await this.fetchPerimeters();
-        console.log(`List of perimeters: ${perimeterData.map(p => p.properties.poly_IncidentName).join(', ')}`)
+        console.log(
+            `List of perimeters: ${perimeterData
+                .map(p => p.properties.poly_IncidentName)
+                .join(', ')}`
+        );
         let added = 0,
             updated = 0,
             failed = [];
@@ -79,6 +110,7 @@ export class PerimeterService {
         }
     }
 
+    // Data Processing
     processPerimeter(rawPerimeter) {
         const processedPerimeter = {
             ...rawPerimeter,
@@ -94,10 +126,12 @@ export class PerimeterService {
 
     fixPerimeterName(rawPerimeter) {
         const oldName = rawPerimeter.properties.poly_IncidentName;
-        let newName = !oldName ? 'Unknown' : rawPerimeter.properties.poly_IncidentName
-            .trim()
-            .toLowerCase()
-            .replace(/\b\w/g, c => c.toUpperCase());
+        let newName = !oldName
+            ? 'Unknown'
+            : oldName
+                  .trim()
+                  .toLowerCase()
+                  .replace(/\b\w/g, c => c.toUpperCase());
 
         if (!/(Fire|Rx|Pb|Prep|Piles|Tree Removal|Complex)\b/.test(newName)) {
             newName += ' Fire';
@@ -121,13 +155,122 @@ export class PerimeterService {
         return newName;
     }
 
+    // Data Maintenance
     async cleanupOldPerimeters(daysThreshold = 90) {
-        return this.repository.deleteOld(daysThreshold);
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+
+        const result = await this.model.deleteMany({
+            'properties.lastUpdated': { $lt: cutoffDate },
+        });
+        console.log(`Cleaned up ${result.deletedCount} old perimeters`);
+        return result;
     }
 
     async removeDuplicatePerimeters() {
-        return this.repository.removeDuplicates();
+        const duplicates = await this.model.aggregate([
+            {
+                $group: {
+                    _id: '$properties.sourceId',
+                    count: { $sum: 1 },
+                    docs: { $push: '$$ROOT' },
+                },
+            },
+            { $match: { count: { $gt: 1 } } },
+        ]);
+
+        let deletedCount = 0;
+        for (const group of duplicates) {
+            group.docs.sort(
+                (a, b) =>
+                    new Date(b.properties.lastUpdated) -
+                    new Date(a.properties.lastUpdated)
+            );
+            const idsToDelete = group.docs.slice(1).map(doc => doc._id);
+
+            if (idsToDelete.length > 0) {
+                const result = await this.model.deleteMany({
+                    _id: { $in: idsToDelete },
+                });
+                deletedCount += result.deletedCount;
+            }
+        }
+
+        console.log(`Removed ${deletedCount} duplicate perimeters`);
+        return { deletedCount };
+    }
+
+    // Queries
+    async findRecentPerimeters(days = 7) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+
+        return this.find({
+            minLastUpdated: cutoffDate.toISOString(),
+        });
+    }
+
+    async findOrphanedPerimeters(fireSourceIds) {
+        return this.model.find({
+            'properties.sourceId': { $nin: fireSourceIds },
+        });
+    }
+
+    // Metadata
+    async getPerimeterStats() {
+        const [allPerimeters, recentPerimeters] = await Promise.all([
+            this.find(),
+            this.findRecentPerimeters(7),
+        ]);
+
+        const fireSourceIds = []; // Would come from FireService in real implementation
+        const orphanedPerimeters = await this.findOrphanedPerimeters(
+            fireSourceIds
+        );
+
+        return {
+            total: allPerimeters.length,
+            recent: recentPerimeters.length,
+            orphaned: orphanedPerimeters.length,
+            orphanedPercentage:
+                Math.round(
+                    (orphanedPerimeters.length / allPerimeters.length) * 100
+                ) || 0,
+        };
+    }
+
+    // Query Mapping
+    mapQuery(apiQuery) {
+        const dbQuery = {};
+
+        // Field mappings
+        const fieldMap = {
+            sourceId: 'properties.sourceId',
+            name: 'properties.name',
+        };
+
+        for (const [apiField, dbField] of Object.entries(fieldMap)) {
+            if (apiQuery[apiField] !== undefined) {
+                dbQuery[dbField] = apiQuery[apiField];
+            }
+        }
+
+        // Time-based filters
+        if (apiQuery.minLastUpdated) {
+            dbQuery['properties.lastUpdated'] = {
+                $gte: new Date(apiQuery.minLastUpdated),
+            };
+        }
+
+        if (apiQuery.maxLastUpdated) {
+            dbQuery['properties.lastUpdated'] = {
+                ...dbQuery['properties.lastUpdated'],
+                $lte: new Date(apiQuery.maxLastUpdated),
+            };
+        }
+
+        return dbQuery;
     }
 }
 
-export const perimeterService = new PerimeterService(perimeterRepository);
+export const perimeterService = new PerimeterService();

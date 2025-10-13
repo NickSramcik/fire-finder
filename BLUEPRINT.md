@@ -1,5 +1,5 @@
 # 🗺️ PROJECT BLUEPRINT
-*Generated Oct 3, 2025, 05:51 PM PDT*
+*Generated Oct 13, 2025, 01:32 PM PDT*
 
 ## Overview
 
@@ -64,10 +64,6 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
     📄 Perimeter.js
   📁 plugins
     📄 database.js
-  📁 repositories
-    📄 BaseRepository.js
-    📄 FireRepository.js
-    📄 PerimeterRepository.js
   📁 services
     📄 FireService.js
     📄 PerimeterService.js
@@ -211,7 +207,7 @@ html, body, #app, main {
     <!-- Map Error -->
     <div v-if="showMapError" class="error-banner">
       Map Error: {{ mapError }}
-      <button @click="dismissMapError" class="ml-4 px-2 py-1 bg-white text-red-600 rounded text-sm">
+      <button class="ml-4 px-2 py-1 bg-white text-red-600 rounded text-sm" @click="dismissMapError">
         Dismiss
       </button>
     </div>
@@ -219,7 +215,7 @@ html, body, #app, main {
     <!-- Data Error -->
     <div v-if="showDataError" class="error-banner">
       Data Error: {{ dataError.message }}
-      <button @click="dismissDataError" class="ml-4 px-2 py-1 bg-white text-red-600 rounded text-sm">
+      <button class="ml-4 px-2 py-1 bg-white text-red-600 rounded text-sm" @click="dismissDataError">
         Dismiss
       </button>
     </div>
@@ -301,7 +297,6 @@ watch([mapLoaded, fires], async () => {
         console.warn('Icons failed to load, but continuing...');
       }
       
-      // FIXED: Handle both array and object data structures
       const firePoints = Array.isArray(fires.value) ? fires.value : fires.value.fires;
       const perimeterData = Array.isArray(fires.value) ? [] : fires.value.perimeters;
       
@@ -1820,89 +1815,32 @@ export const cache = new FireCache();
 
 ```
 
-### ./server/repositories/BaseRepository.js
+### ./server/services/FireService.js
 ```javascript
-/* eslint-disable no-unused-vars */
-// Abstract base class defining the repository interface
-export class BaseRepository {
-    constructor() {
-    }
-
-    async find(query = {}) {
-        throw new Error('find method must be implemented');
-    }
-
-    async findOne(identifier) {
-        throw new Error('findOne method must be implemented');
-    }
-
-    async create(data) {
-        throw new Error('create method must be implemented');
-    }
-
-    async update(identifier, data) {
-        throw new Error('update method must be implemented');
-    }
-
-    async delete(query = {}) {
-        throw new Error('delete method must be implemented');
-    }
-
-    async deleteOld(cutoffDate) {
-        throw new Error('deleteOld method must be implemented');
-    }
-
-    async removeDuplicates() {
-        throw new Error('removeDuplicates method must be implemented');
-    }
-
-    // Common query mapping logic
-    mapQuery(apiQuery, fieldMap) {
-        const dbQuery = {};
-
-        if (fieldMap) {
-            for (const [apiField, dbField] of Object.entries(fieldMap)) {
-                if (apiQuery[apiField]) {
-                    dbQuery[dbField] = apiQuery[apiField];
-                }
-            }
-        }
-
-        // Special handling for dates
-        if (apiQuery.minLastUpdated) {
-            dbQuery['properties.lastUpdated'] = {
-                $gte: new Date(apiQuery.minLastUpdated),
-            };
-        }
-
-        if (apiQuery.hasArea) {
-            dbQuery['properties.area'] = { $exists: true, $ne: null };
-        }
-
-        return dbQuery;
-    }
-}
-
-```
-
-### ./server/repositories/FireRepository.js
-```javascript
-import { BaseRepository } from './BaseRepository.js';
 import FirePoint from '../models/FirePoint.js';
 
-export class FireRepository extends BaseRepository {
+export class FireService {
     constructor() {
-        super();
         this.model = FirePoint;
     }
 
+    // Data Access Methods
     async find(query = {}) {
-        const dbQuery = this.mapQuery(query, {
-            sourceId: 'properties.sourceId',
-            status: 'properties.status',
-            cause: 'properties.cause',
-        });
-        return this.model.find(dbQuery);
+        const dbQuery = this.mapQuery(query);
+        let mongooseQuery = this.model.find(dbQuery);
+
+        if (query.limit) {
+            mongooseQuery = mongooseQuery.limit(parseInt(query.limit));
+        }
+
+        if (query.skip) {
+            mongooseQuery = mongooseQuery.skip(parseInt(query.skip));
+        }
+
+        // Default: largest fires first
+        mongooseQuery = mongooseQuery.sort({ 'properties.area': -1 });
+
+        return mongooseQuery.exec();
     }
 
     async findOne(sourceId) {
@@ -1923,10 +1861,7 @@ export class FireRepository extends BaseRepository {
     }
 
     async delete(query = {}) {
-        const dbQuery = this.mapQuery(query, {
-            sourceId: 'properties.sourceId',
-            status: 'properties.status',
-        });
+        const dbQuery = this.mapQuery(query);
 
         if (Object.keys(dbQuery).length === 0) {
             throw new Error('Delete query requires filters');
@@ -1935,183 +1870,7 @@ export class FireRepository extends BaseRepository {
         return this.model.deleteMany(dbQuery);
     }
 
-    async deleteOld(daysThreshold = 90) {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
-
-        const result = await this.model.deleteMany({
-            'properties.lastUpdated': { $lt: cutoffDate },
-        });
-        console.log(`Cleaned up ${result.deletedCount} old fires`);
-        return result;
-    }
-
-    async removeDuplicates() {
-        const duplicates = await this.model.aggregate([
-            {
-                $group: {
-                    _id: '$properties.sourceId',
-                    count: { $sum: 1 },
-                    docs: { $push: '$$ROOT' },
-                },
-            },
-            { $match: { count: { $gt: 1 } } },
-        ]);
-
-        let deletedCount = 0;
-        for (const group of duplicates) {
-            group.docs.sort(
-                (a, b) =>
-                    new Date(b.properties.lastUpdated) -
-                    new Date(a.properties.lastUpdated)
-            );
-            const idsToDelete = group.docs.slice(1).map(doc => doc._id);
-
-            if (idsToDelete.length > 0) {
-                const result = await this.model.deleteMany({
-                    _id: { $in: idsToDelete },
-                });
-                deletedCount += result.deletedCount;
-            }
-        }
-
-        console.log(`Removed ${deletedCount} duplicate fires`);
-        return { deletedCount };
-    }
-}
-
-// Export instance directly
-export const fireRepository = new FireRepository();
-
-```
-
-### ./server/repositories/PerimeterRepository.js
-```javascript
-import { BaseRepository } from './BaseRepository.js';
-import Perimeter from '../models/Perimeter.js';
-
-export class PerimeterRepository extends BaseRepository {
-    constructor() {
-        super();
-        this.model = Perimeter;
-    }
-
-    async find(query = {}) {
-        const dbQuery = this.mapQuery(query, {
-            sourceId: 'properties.sourceId',
-            status: 'properties.status',
-        });
-        return this.model.find(dbQuery);
-    }
-
-    async findOne(sourceId) {
-        return this.model.findOne({ 'properties.sourceId': sourceId });
-    }
-
-    async create(perimeterData) {
-        const newPerimeter = new this.model(perimeterData);
-        return newPerimeter.save();
-    }
-
-    async update(sourceId, updateData) {
-        return this.model.findOneAndUpdate(
-            { 'properties.sourceId': sourceId },
-            updateData,
-            { new: true, runValidators: true }
-        );
-    }
-
-    async delete(query = {}) {
-        const dbQuery = this.mapQuery(query, {
-            sourceId: 'properties.sourceId',
-            status: 'properties.status',
-        });
-
-        if (Object.keys(dbQuery).length === 0) {
-            throw new Error('Delete query requires filters');
-        }
-
-        return this.model.deleteMany(dbQuery);
-    }
-
-    async deleteOld(daysThreshold = 90) {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
-
-        const result = await this.model.deleteMany({
-            'properties.lastUpdated': { $lt: cutoffDate },
-        });
-        console.log(`Cleaned up ${result.deletedCount} old perimeters`);
-        return result;
-    }
-
-    async removeDuplicates() {
-        const duplicates = await this.model.aggregate([
-            {
-                $group: {
-                    _id: '$properties.sourceId',
-                    count: { $sum: 1 },
-                    docs: { $push: '$$ROOT' },
-                },
-            },
-            { $match: { count: { $gt: 1 } } },
-        ]);
-
-        let deletedCount = 0;
-        for (const group of duplicates) {
-            group.docs.sort(
-                (a, b) =>
-                    new Date(b.properties.lastUpdated) -
-                    new Date(a.properties.lastUpdated)
-            );
-            const idsToDelete = group.docs.slice(1).map(doc => doc._id);
-
-            if (idsToDelete.length > 0) {
-                const result = await this.model.deleteMany({
-                    _id: { $in: idsToDelete },
-                });
-                deletedCount += result.deletedCount;
-            }
-        }
-
-        console.log(`Removed ${deletedCount} duplicate perimeters`);
-        return { deletedCount };
-    }
-}
-
-export const perimeterRepository = new PerimeterRepository();
-
-```
-
-### ./server/services/FireService.js
-```javascript
-import { FireRepository } from '../repositories/FireRepository.js';
-
-export class FireService {
-    constructor(repository) {
-        this.repository = repository;
-    }
-
-    async find(query = {}) {
-        return this.repository.find(query);
-    }
-
-    async findOne(sourceId) {
-        return this.repository.findOne(sourceId);
-    }
-
-    async create(fireData) {
-        return this.repository.create(fireData);
-    }
-
-    async update(sourceId, updateData) {
-        return this.repository.update(sourceId, updateData);
-    }
-
-    async delete(query = {}) {
-        return this.repository.delete(query);
-    }
-
+    // External Data Integration
     async renewFires() {
         const fireData = await this.fetchFirePoints();
         let added = 0,
@@ -2155,9 +1914,8 @@ export class FireService {
         }
     }
 
+    // Data Processing
     processFire(rawPoint) {
-        let prescribed = false;
-
         const processedPoint = {
             geometry: {
                 type: 'Point',
@@ -2177,7 +1935,7 @@ export class FireService {
                 lastUpdated: new Date(
                     rawPoint.properties.ModifiedOnDateTime_dt
                 ),
-                status: this.fixFireStatus(rawPoint, prescribed),
+                status: this.fixFireStatus(rawPoint),
                 area: rawPoint.properties.IncidentSize,
                 containment: rawPoint.properties.PercentContained,
                 cause: rawPoint.properties.FireCause,
@@ -2215,7 +1973,7 @@ export class FireService {
         return newName;
     }
 
-    fixFireStatus(rawPoint, prescribed) {
+    fixFireStatus(rawPoint) {
         const behaviors = [
             rawPoint.properties.FireBehaviorGeneral,
             rawPoint.properties.FireBehaviorGeneral1,
@@ -2227,59 +1985,203 @@ export class FireService {
             .filter(behavior => behavior !== null)
             .join(', ');
 
-        if (!status) {
-            return prescribed ? 'Prescribed' : null;
-        }
-
-        return status;
+        return status || null;
     }
 
+    // Data Maintenance
     async cleanupOldFires(daysThreshold = 90) {
-        return this.repository.deleteOld(daysThreshold);
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+
+        const result = await this.model.deleteMany({
+            'properties.lastUpdated': { $lt: cutoffDate },
+        });
+        console.log(`Cleaned up ${result.deletedCount} old fires`);
+        return result;
     }
 
     async removeDuplicateFires() {
-        return this.repository.removeDuplicates();
+        const duplicates = await this.model.aggregate([
+            {
+                $group: {
+                    _id: '$properties.sourceId',
+                    count: { $sum: 1 },
+                    docs: { $push: '$$ROOT' },
+                },
+            },
+            { $match: { count: { $gt: 1 } } },
+        ]);
+
+        let deletedCount = 0;
+        for (const group of duplicates) {
+            group.docs.sort(
+                (a, b) =>
+                    new Date(b.properties.lastUpdated) -
+                    new Date(a.properties.lastUpdated)
+            );
+            const idsToDelete = group.docs.slice(1).map(doc => doc._id);
+
+            if (idsToDelete.length > 0) {
+                const result = await this.model.deleteMany({
+                    _id: { $in: idsToDelete },
+                });
+                deletedCount += result.deletedCount;
+            }
+        }
+
+        console.log(`Removed ${deletedCount} duplicate fires`);
+        return { deletedCount };
     }
-}
 
-// Export singleton instance directly
-export const fireService = new FireService(FireRepository);
+    // Queries
+    async findActiveFires() {
+        return this.find({
+            status: 'Active',
+            hasContainment: 'true',
+            minArea: 100,
+        });
+    }
 
+    async findLargeFires(minArea = 10000) {
+        return this.find({
+            minArea: minArea,
+            hasArea: 'true',
+        });
+    }
+
+    async findByState(state) {
+        return this.find({ state });
+    }
+
+    // Metadata
+    async getFireStatistics() {
+        const [allFires, activeFires, largeFires] = await Promise.all([
+            this.find(),
+            this.findActiveFires(),
+            this.findLargeFires(10000),
+        ]);
+
+        return {
+            total: allFires.length,
+            active: activeFires.length,
+            large: largeFires.length,
+            totalArea: allFires.reduce(
+                (sum, fire) => sum + (fire.properties.area || 0),
+                0
+            ),
+        };
+    }
+
+    // Query Mapping
+    mapQuery(apiQuery) {
+        const dbQuery = {};
+
+        // Field mappings
+        const fieldMap = {
+            sourceId: 'properties.sourceId',
+            status: 'properties.status',
+            cause: 'properties.cause',
+            fireType: 'properties.fireType',
+            state: 'properties.state',
+        };
+
+        for (const [apiField, dbField] of Object.entries(fieldMap)) {
+            if (apiQuery[apiField] !== undefined) {
+                dbQuery[dbField] = apiQuery[apiField];
+            }
+        }
+
+        // Time-based filters
+        if (apiQuery.minLastUpdated) {
+            dbQuery['properties.lastUpdated'] = {
+                $gte: new Date(apiQuery.minLastUpdated),
+            };
+        }
+
+        if (apiQuery.maxLastUpdated) {
+            dbQuery['properties.lastUpdated'] = {
+                ...dbQuery['properties.lastUpdated'],
+                $lte: new Date(apiQuery.maxLastUpdated),
+            };
+        }
+
+        // Existence filters
+        if (apiQuery.hasArea === 'true') {
+            dbQuery['properties.area'] = { $exists: true, $ne: null, $gt: 0 };
+        }
+
+        if (apiQuery.hasContainment === 'true') {
+            dbQuery['properties.containment'] = { $exists: true, $ne: null };
+        }
+
+        // Comparison filters
+        if (apiQuery.minArea) {
+            dbQuery['properties.area'] = {
 ```
 
 ### ./server/services/PerimeterService.js
 ```javascript
-import { PerimeterRepository } from '../repositories/PerimeterRepository.js';
+import Perimeter from '../models/Perimeter.js';
 
 export class PerimeterService {
-    constructor(repository) {
-        this.repository = repository;
+    constructor() {
+        this.model = Perimeter;
     }
 
+    // Data Access Methods
     async find(query = {}) {
-        return this.repository.find(query);
+        const dbQuery = this.mapQuery(query);
+        let mongooseQuery = this.model.find(dbQuery);
+
+        if (query.limit) {
+            mongooseQuery = mongooseQuery.limit(parseInt(query.limit));
+        }
+
+        if (query.skip) {
+            mongooseQuery = mongooseQuery.skip(parseInt(query.skip));
+        }
+
+        // Default: most recent first
+        mongooseQuery = mongooseQuery.sort({ 'properties.lastUpdated': -1 });
+
+        return mongooseQuery.exec();
     }
 
     async findOne(sourceId) {
-        return this.repository.findOne(sourceId);
+        return this.model.findOne({ 'properties.sourceId': sourceId });
     }
 
     async create(perimeterData) {
-        return this.repository.create(perimeterData);
+        const newPerimeter = new this.model(perimeterData);
+        return newPerimeter.save();
     }
 
     async update(sourceId, updateData) {
-        return this.repository.update(sourceId, updateData);
+        return this.model.findOneAndUpdate(
+            { 'properties.sourceId': sourceId },
+            updateData,
+            { new: true, runValidators: true }
+        );
     }
 
     async delete(query = {}) {
-        return this.repository.delete(query);
+        const dbQuery = this.mapQuery(query);
+
+        if (Object.keys(dbQuery).length === 0) {
+            throw new Error('Delete query requires filters');
+        }
+
+        return this.model.deleteMany(dbQuery);
     }
 
+    // External Data Integration
     async renewPerimeters() {
         const perimeterData = await this.fetchPerimeters();
-        console.log(`List of perimeters: ${perimeterData.map(p => p.properties.poly_IncidentName).join(', ')}`)
+        console.log(
+            `List of perimeters: ${perimeterData
+                .map(p => p.properties.poly_IncidentName)
+                .join(', ')}`
+        );
         let added = 0,
             updated = 0,
             failed = [];
@@ -2331,6 +2233,7 @@ export class PerimeterService {
         }
     }
 
+    // Data Processing
     processPerimeter(rawPerimeter) {
         const processedPerimeter = {
             ...rawPerimeter,
@@ -2346,10 +2249,12 @@ export class PerimeterService {
 
     fixPerimeterName(rawPerimeter) {
         const oldName = rawPerimeter.properties.poly_IncidentName;
-        let newName = !oldName ? 'Unknown' : rawPerimeter.properties.poly_IncidentName
-            .trim()
-            .toLowerCase()
-            .replace(/\b\w/g, c => c.toUpperCase());
+        let newName = !oldName
+            ? 'Unknown'
+            : oldName
+                  .trim()
+                  .toLowerCase()
+                  .replace(/\b\w/g, c => c.toUpperCase());
 
         if (!/(Fire|Rx|Pb|Prep|Piles|Tree Removal|Complex)\b/.test(newName)) {
             newName += ' Fire';
@@ -2373,17 +2278,125 @@ export class PerimeterService {
         return newName;
     }
 
+    // Data Maintenance
     async cleanupOldPerimeters(daysThreshold = 90) {
-        return this.repository.deleteOld(daysThreshold);
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+
+        const result = await this.model.deleteMany({
+            'properties.lastUpdated': { $lt: cutoffDate },
+        });
+        console.log(`Cleaned up ${result.deletedCount} old perimeters`);
+        return result;
     }
 
     async removeDuplicatePerimeters() {
-        return this.repository.removeDuplicates();
+        const duplicates = await this.model.aggregate([
+            {
+                $group: {
+                    _id: '$properties.sourceId',
+                    count: { $sum: 1 },
+                    docs: { $push: '$$ROOT' },
+                },
+            },
+            { $match: { count: { $gt: 1 } } },
+        ]);
+
+        let deletedCount = 0;
+        for (const group of duplicates) {
+            group.docs.sort(
+                (a, b) =>
+                    new Date(b.properties.lastUpdated) -
+                    new Date(a.properties.lastUpdated)
+            );
+            const idsToDelete = group.docs.slice(1).map(doc => doc._id);
+
+            if (idsToDelete.length > 0) {
+                const result = await this.model.deleteMany({
+                    _id: { $in: idsToDelete },
+                });
+                deletedCount += result.deletedCount;
+            }
+        }
+
+        console.log(`Removed ${deletedCount} duplicate perimeters`);
+        return { deletedCount };
+    }
+
+    // Queries
+    async findRecentPerimeters(days = 7) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+
+        return this.find({
+            minLastUpdated: cutoffDate.toISOString(),
+        });
+    }
+
+    async findOrphanedPerimeters(fireSourceIds) {
+        return this.model.find({
+            'properties.sourceId': { $nin: fireSourceIds },
+        });
+    }
+
+    // Metadata
+    async getPerimeterStats() {
+        const [allPerimeters, recentPerimeters] = await Promise.all([
+            this.find(),
+            this.findRecentPerimeters(7),
+        ]);
+
+        const fireSourceIds = []; // Would come from FireService in real implementation
+        const orphanedPerimeters = await this.findOrphanedPerimeters(
+            fireSourceIds
+        );
+
+        return {
+            total: allPerimeters.length,
+            recent: recentPerimeters.length,
+            orphaned: orphanedPerimeters.length,
+            orphanedPercentage:
+                Math.round(
+                    (orphanedPerimeters.length / allPerimeters.length) * 100
+                ) || 0,
+        };
+    }
+
+    // Query Mapping
+    mapQuery(apiQuery) {
+        const dbQuery = {};
+
+        // Field mappings
+        const fieldMap = {
+            sourceId: 'properties.sourceId',
+            name: 'properties.name',
+        };
+
+        for (const [apiField, dbField] of Object.entries(fieldMap)) {
+            if (apiQuery[apiField] !== undefined) {
+                dbQuery[dbField] = apiQuery[apiField];
+            }
+        }
+
+        // Time-based filters
+        if (apiQuery.minLastUpdated) {
+            dbQuery['properties.lastUpdated'] = {
+                $gte: new Date(apiQuery.minLastUpdated),
+            };
+        }
+
+        if (apiQuery.maxLastUpdated) {
+            dbQuery['properties.lastUpdated'] = {
+                ...dbQuery['properties.lastUpdated'],
+                $lte: new Date(apiQuery.maxLastUpdated),
+            };
+        }
+
+        return dbQuery;
     }
 }
 
-// Export singleton instance directly
-export const perimeterService = new PerimeterService(PerimeterRepository);
+export const perimeterService = new PerimeterService();
 
 ```
 
