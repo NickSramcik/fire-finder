@@ -188,7 +188,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useUser } from '~/composables/useUser';
 
-const { loggedIn, user, isAdmin, signInWithGoogle, signInWithApple, signOut } = useUser();
+const { loggedIn, user, isAdmin, signInWithGoogle, signOut } = useUser();
 
 // ---- Data (admin only — only fetched when isAdmin) ----
 const fireData = ref(null);

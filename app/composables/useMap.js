@@ -38,6 +38,13 @@ export function useMap() {
             return;
         }
 
+        if (!mapboxgl.supported()) {
+            mapError.value =
+                'WebGL is not enabled on your device or browser. To view the map, try enabling hardware acceleration in your browser settings, or open this page in Chrome.';
+            console.error('WebGL not supported');
+            return;
+        }
+
         mapboxgl.accessToken = config.public.mapboxToken;
 
         try {

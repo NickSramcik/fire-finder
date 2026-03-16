@@ -4,8 +4,10 @@
 const PROTECTED = [
     { path: '/api/fire', method: 'POST' },
     { path: '/api/perimeter', method: 'POST' },
+    { path: '/api/hotspots', method: 'POST' },
     { path: '/api/fire', method: 'DELETE' },
     { path: '/api/perimeter', method: 'DELETE' },
+    { path: '/api/hotspots', method: 'DELETE' },
 ];
 
 export default defineEventHandler(async event => {

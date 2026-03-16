@@ -1,5 +1,5 @@
 # 🗺️ PROJECT BLUEPRINT
-*Generated Mar 15, 2026, 05:29 PM PDT*
+*Generated Mar 16, 2026, 01:05 PM PDT*
 
 ## Overview
 
@@ -72,6 +72,11 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
     📄 User.js
   📁 plugins
     📄 database.js
+  📁 routes
+    📁 auth
+      📄 apple.get.js
+      📄 google.get.js
+      📄 logout.get.js
   📁 services
     📄 FireService.js
     📄 HotspotService.js
@@ -146,10 +151,10 @@ export default defineNuxtConfig({
         clientId: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID,
         clientSecret: process.env.NUXT_OAUTH_GOOGLE_CLIENT_SECRET,
       },
-      apple: {
-        clientId: process.env.NUXT_OAUTH_APPLE_CLIENT_ID,
-        clientSecret: process.env.NUXT_OAUTH_APPLE_CLIENT_SECRET,
-      },
+      // apple: {
+      //   clientId: process.env.NUXT_OAUTH_APPLE_CLIENT_ID,
+      //   clientSecret: process.env.NUXT_OAUTH_APPLE_CLIENT_SECRET,
+      // },
     },
     public: {
       mapboxToken: process.env.PUBLIC_MAPBOX_TOKEN,
@@ -601,36 +606,106 @@ onMounted(() => {
 ### ./app/components/NavBar.vue
 ```javascript
 <template>
-  <nav class="bg-base-200 flex items-center p-4 navbar">
-    <button :class="{ active: activeTab === 'map'}" @click="switchTab('map')">Fire Finder</button>
-    <button :class="{ active: activeTab === 'feed'}" @click="switchTab('feed')">Feed</button>
-    <button :class="{ active: activeTab === 'help'}" @click="switchTab('help')">Help</button>
-    <button :class="{ active: activeTab === 'profile'}" @click="switchTab('profile')">Profile</button>
+  <nav class="navbar">
+    <button :class="{ active: activeTab === 'map' }" @click="switchTab('map')">Fire Finder</button>
+    <button :class="{ active: activeTab === 'feed' }" @click="switchTab('feed')">Feed</button>
+    <button :class="{ active: activeTab === 'help' }" @click="switchTab('help')">Help</button>
+    <button :class="{ active: activeTab === 'profile' }" @click="switchTab('profile')">Profile</button>
+
+    <div class="spacer" />
+
+    <!-- Guest: sign in button -->
+    <button v-if="!loggedIn" @click="showSignIn = true">Sign in</button>
+
+    <!-- Signed in: avatar button opens logout modal -->
+    <button v-else class="avatar-btn" @click="showAccount = true">
+      <img v-if="user?.avatar" :src="user.avatar" :alt="user?.name" class="avatar" />
+      <span v-else>{{ user?.name?.charAt(0) ?? '?' }}</span>
+    </button>
+
+    <!-- Sign-in modal -->
+    <dialog :open="showSignIn" class="modal">
+      <div class="modal-box max-w-sm">
+        <h3 class="font-bold text-lg mb-2">Sign in</h3>
+        <p class="text-sm text-base-content/70 mb-6">
+          Save your home location and settings across devices.
+        </p>
+        <div class="flex flex-col gap-3">
+          <button class="btn btn-outline w-full gap-2" @click="signInWithGoogle">
+            <img src="https://www.google.com/favicon.ico" class="w-4 h-4" alt="" />
+            Continue with Google
+          </button>
+          <!-- <button class="btn btn-outline w-full gap-2" @click="signInWithApple">
+            Continue with Apple
+          </button> -->
+        </div>
+        <p class="text-xs text-center text-base-content/50 mt-4">
+          Or continue as guest — no sign-in needed to view maps.
+        </p>
+        <div class="modal-action">
+          <button class="btn btn-ghost btn-sm" @click="showSignIn = false">Close</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="showSignIn = false" />
+    </dialog>
+
+    <!-- Account modal -->
+    <dialog :open="showAccount" class="modal">
+      <div class="modal-box max-w-sm">
+        <div class="flex items-center gap-3 mb-6">
+          <img v-if="user?.avatar" :src="user.avatar" :alt="user?.name" class="w-10 h-10 rounded-full" />
+          <div v-else class="w-10 h-10 rounded-full bg-base-300 flex items-center justify-center font-bold">
+            {{ user?.name?.charAt(0) ?? '?' }}
+          </div>
+          <div>
+            <p class="font-semibold">{{ user?.name }}</p>
+            <p class="text-sm text-base-content/60">{{ user?.email }}</p>
+          </div>
+        </div>
+        <div class="modal-action justify-between">
+          <button class="btn btn-ghost btn-sm" @click="showAccount = false">Close</button>
+          <button class="btn btn-error btn-sm" @click="signOut">Sign out</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="showAccount = false" />
+    </dialog>
   </nav>
 </template>
 
 <script setup>
+import { ref } from 'vue';
+import { useUser } from '~/composables/useUser';
+
 defineProps({
   activeTab: {
     type: String,
-    required: true
-  }
-})
+    required: true,
+  },
+});
 
 const emit = defineEmits(['switch-tab']);
 function switchTab(tab) {
   emit('switch-tab', tab);
 }
+
+const { loggedIn, user, signInWithGoogle, signInWithApple, signOut } = useUser();
+const showSignIn = ref(false);
+const showAccount = ref(false);
 </script>
 
 <style scoped>
-.navbar {
+nav.navbar {
   display: flex;
+  align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background-color: #1f1f1f;
-  height: 4rem; 
+  background-color: #2a2a2a;
+  height: 4rem;
   box-sizing: border-box;
+}
+
+.spacer {
+  flex: 1;
 }
 
 button {
@@ -645,7 +720,7 @@ button {
 }
 
 button:hover {
-  background-color: #333;
+  background-color: #3a3a3a;
   color: white;
 }
 
@@ -654,14 +729,42 @@ button.active {
   color: white;
   font-weight: bold;
 }
+
+.avatar-btn {
+  padding: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #ccc;
+  background: none;
+  border: 2px solid #ccc;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar-btn:hover {
+  border-color: white;
+  color: white;
+  background-color: #3a3a3a;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 </style>
 
 ```
 
 ### ./app/components/UserProfile.vue
 ```javascript
-<!-- eslint-disable @typescript-eslint/no-unused-vars -->
- <template>
+<template>
   <div class="p-6 max-w-4xl mx-auto">
 
     <!-- Guest state -->
@@ -672,216 +775,193 @@ button.active {
         Save your home location and preferences. The map always works without an account.
       </p>
       <div class="flex flex-col gap-3 max-w-xs mx-auto">
-        <button class="btn btn-outline w-full" @click="signInWithGoogle">
+        <button class="btn btn-outline w-full gap-2" @click="signInWithGoogle">
+          <img src="https://www.google.com/favicon.ico" class="w-4 h-4" alt="" />
           Continue with Google
         </button>
-        <button class="btn btn-outline w-full" @click="signInWithApple">
+        <!-- <button class="btn btn-outline w-full gap-2" @click="signInWithApple">
           Continue with Apple
-        </button>
+        </button> -->
       </div>
     </div>
 
     <!-- Signed-in state -->
     <template v-else>
-      <h2 class="text-2xl font-bold mb-6">Profile</h2>
 
-      <!-- Settings panel — visible to all signed-in users -->
+      <!-- User header -->
+      <div class="flex items-center gap-4 mb-8">
+        <img
+          v-if="user.avatar"
+          :src="user.avatar"
+          :alt="user.name"
+          class="w-14 h-14 rounded-full"
+        />
+        <div v-else class="w-14 h-14 rounded-full bg-base-300 flex items-center justify-center text-2xl">
+          {{ user.name?.charAt(0) ?? '?' }}
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold">{{ user.name }}</h2>
+          <p class="text-sm text-base-content/60">{{ user.email }}</p>
+        </div>
+      </div>
+
+      <!-- Settings panel — all signed-in users -->
       <div class="card bg-base-200 mb-6">
         <div class="card-body">
-          <h3 class="card-title">Settings</h3>
-          <!-- Home location, preferences, etc. go here -->
-          <p class="text-sm text-base-content/70">Settings coming soon.</p>
-          <button class="btn btn-ghost btn-sm w-fit mt-2" @click="signOut">
-            Sign out
-          </button>
+          <h3 class="card-title mb-4">⚙️ Settings</h3>
+          <p class="text-sm text-base-content/60">
+            Settings such as home location will appear here in a future update.
+          </p>
+          <div class="card-actions mt-4">
+            <button class="btn btn-ghost btn-sm" @click="signOut">
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Admin panel — only rendered for admins -->
+      <!-- Admin dashboard — isAdmin only -->
       <template v-if="isAdmin">
-        <div class="p-6 max-w-4xl mx-auto">
-    <h2 class="text-2xl font-bold mb-6">Admin Dashboard</h2>
 
-    <!-- Stats Overview -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      <!-- Total Fires -->
-      <div class="stat bg-base-200 rounded-lg">
-        <div class="stat-title">Total Fires</div>
-        <div class="stat-value text-primary text-2xl">{{ totalFires }}</div>
-        <div class="stat-desc">In database</div>
-      </div>
-      
-      <!-- Active Fires -->
-      <div class="stat bg-base-200 rounded-lg">
-        <div class="stat-title">Active Fires</div>
-        <div class="stat-value text-secondary text-2xl">{{ activeFiresCount }}</div>
-        <div class="stat-desc">Containment &lt; 100%</div>
-      </div>
-      
-      <!-- Total Perimeters -->
-      <div class="stat bg-base-200 rounded-lg">
-        <div class="stat-title">Total Perimeters</div>
-        <div class="stat-value text-accent text-2xl">{{ totalPerimeters }}</div>
-        <div class="stat-desc">In database</div>
-      </div>
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div class="stat bg-base-200 rounded-lg">
+            <div class="stat-title">Total Fires</div>
+            <div class="stat-value text-primary text-2xl">{{ totalFires }}</div>
+            <div class="stat-desc">In database</div>
+          </div>
+          <div class="stat bg-base-200 rounded-lg">
+            <div class="stat-title">Active Fires</div>
+            <div class="stat-value text-secondary text-2xl">{{ activeFiresCount }}</div>
+            <div class="stat-desc">Containment &lt; 100%</div>
+          </div>
+          <div class="stat bg-base-200 rounded-lg">
+            <div class="stat-title">Total Perimeters</div>
+            <div class="stat-value text-accent text-2xl">{{ totalPerimeters }}</div>
+            <div class="stat-desc">In database</div>
+          </div>
+          <div class="stat bg-base-200 rounded-lg">
+            <div class="stat-title">Orphaned Perimeters</div>
+            <div class="stat-value text-warning text-2xl">{{ orphanedPerimetersCount }}</div>
+            <div class="stat-desc">No matching fire</div>
+          </div>
+        </div>
 
-      <!-- Orphaned Perimeters -->
-      <div class="stat bg-base-200 rounded-lg">
-        <div class="stat-title">Orphaned Perimeters</div>
-        <div class="stat-value text-warning text-2xl">{{ orphanedPerimetersCount }}</div>
-        <div class="stat-desc">No matching fire</div>
-      </div>
-    </div>
+        <!-- Detailed Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <h3 class="card-title mb-4">🔥 Fire Statistics</h3>
+              <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                  <span class="font-medium">Prescribed Burns:</span>
+                  <span class="badge badge-success">{{ prescribedFiresCount }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-medium">Contained Fires (100%):</span>
+                  <span class="badge badge-info">{{ containedFiresCount }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-medium">Large Fires (&gt; 10k acres):</span>
+                  <span class="badge badge-warning">{{ largeFiresCount }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-medium">Average Containment:</span>
+                  <span class="font-mono">{{ averageContainment }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    <!-- Detailed Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      <!-- Fire Statistics -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title mb-4">🔥 Fire Statistics</h3>
-          <div class="space-y-3">
-            <div class="flex justify-between items-center">
-              <span class="font-medium">Prescribed Burns:</span>
-              <span class="badge badge-success">{{ prescribedFiresCount }}</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="font-medium">Contained Fires (100%):</span>
-              <span class="badge badge-info">{{ containedFiresCount }}</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="font-medium">Large Fires (&gt; 10k acres):</span>
-              <span class="badge badge-warning">{{ largeFiresCount }}</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="font-medium">Average Containment:</span>
-              <span class="font-mono">{{ averageContainment }}%</span>
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <h3 class="card-title mb-4">📍 Perimeter Statistics</h3>
+              <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                  <span class="font-medium">Matched Perimeters:</span>
+                  <span class="badge badge-success">{{ matchedPerimetersCount }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-medium">Orphan Rate:</span>
+                  <span class="font-mono">{{ orphanedPercentage }}%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-medium">Last Updated:</span>
+                  <span class="text-sm">{{ statsLastUpdated }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Perimeter Statistics -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title mb-4">📍 Perimeter Statistics</h3>
-          <div class="space-y-3">
-            <div class="flex justify-between items-center">
-              <span class="font-medium">Matched Perimeters:</span>
-              <span class="badge badge-success">{{ matchedPerimetersCount }}</span>
+        <!-- Data Management Actions -->
+        <div class="space-y-4">
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <h3 class="card-title">Fire Point Data</h3>
+              <p class="text-sm mb-4">Update fire point data from NIFC API</p>
+              <button
+                :disabled="fireLoading"
+                class="btn btn-accent w-full md:w-auto"
+                @click="renewFires"
+              >
+                {{ fireLoading ? 'Updating...' : 'Renew Fire Data' }}
+              </button>
+              <div v-if="fireResponse" class="mt-3 p-3 bg-success/20 rounded">
+                <p class="text-success font-semibold">Success!</p>
+                <p>Added {{ fireResponse.added }} fires, updated {{ fireResponse.updated }} fires.</p>
+              </div>
+              <div v-if="fireError" class="mt-3 p-3 bg-error/20 rounded">
+                <p class="text-error font-semibold">Error:</p>
+                <p>{{ fireError }}</p>
+              </div>
             </div>
-            <div class="flex justify-between items-center">
-              <span class="font-medium">Orphan Rate:</span>
-              <span class="font-mono">{{ orphanedPercentage }}%</span>
+          </div>
+
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <h3 class="card-title">Fire Perimeters</h3>
+              <p class="text-sm mb-4">Update fire perimeter data from NIFC API</p>
+              <button
+                :disabled="perimeterLoading"
+                class="btn btn-accent w-full md:w-auto"
+                @click="renewPerimeters"
+              >
+                {{ perimeterLoading ? 'Updating...' : 'Renew Perimeter Data' }}
+              </button>
+              <div v-if="perimeterResponse" class="mt-3 p-3 bg-success/20 rounded">
+                <p class="text-success font-semibold">Success!</p>
+                <p>Added {{ perimeterResponse.added }} perimeters, updated {{ perimeterResponse.updated }} perimeters.</p>
+              </div>
+              <div v-if="perimeterError" class="mt-3 p-3 bg-error/20 rounded">
+                <p class="text-error font-semibold">Error:</p>
+                <p>{{ perimeterError }}</p>
+              </div>
             </div>
-            <div class="flex justify-between items-center">
-              <span class="font-medium">Last Updated:</span>
-              <span class="text-sm">{{ statsLastUpdated }}</span>
-            </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Data Management Actions -->
-    <div class="space-y-4">
-      <!-- Fire Data Update -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title">Fire Point Data</h3>
-          <p class="text-sm mb-4">Update fire point data from NIFC API</p>
-          
-          <button 
-            :disabled="fireLoading"
-            class="btn btn-accent w-full md:w-auto"
-            @click="renewFires" 
-          >
-            {{ fireLoading ? 'Updating...' : 'Renew Fire Data' }}
-          </button>
-
-          <div v-if="fireResponse" class="mt-3 p-3 bg-success/20 rounded">
-            <p class="text-success font-semibold">Success!</p>
-            <p>Added {{ fireResponse.added }} fires, updated {{ fireResponse.updated }} fires.</p>
-          </div>
-          
-          <div v-if="fireError" class="mt-3 p-3 bg-error/20 rounded">
-            <p class="text-error font-semibold">Error:</p>
-            <p>{{ fireError }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Perimeter Data Update -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title">Fire Perimeters</h3>
-          <p class="text-sm mb-4">Update fire perimeter data from NIFC API</p>
-          
-          <button 
-            :disabled="perimeterLoading"
-            class="btn btn-accent w-full md:w-auto"
-            @click="renewPerimeters" 
-          >
-            {{ perimeterLoading ? 'Updating...' : 'Renew Perimeter Data' }}
-          </button>
-
-          <div v-if="perimeterResponse" class="mt-3 p-3 bg-success/20 rounded">
-            <p class="text-success font-semibold">Success!</p>
-            <p>Added {{ perimeterResponse.added }} perimeters, updated {{ perimeterResponse.updated }} perimeters.</p>
-          </div>
-          
-          <div v-if="perimeterError" class="mt-3 p-3 bg-error/20 rounded">
-            <p class="text-error font-semibold">Error:</p>
-            <p>{{ perimeterError }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Hotspot Data Update -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title">🔥 Hotspot Data</h3>
-          <p class="text-sm mb-4">Update infrared hotspot data from NASA FIRMS</p>
-
-          <button 
-            :disabled="hotspotLoading"
-            class="btn btn-accent w-full md:w-auto"
-            @click="renewHotspots" 
-          >
-            {{ hotspotLoading ? 'Updating...' : 'Renew Hotspot Data' }}
-          </button>
-        
-          <div v-if="hotspotResponse" class="mt-3 p-3 bg-success/20 rounded">
-            <p class="text-success font-semibold">Success!</p>
-            <p>Added {{ hotspotResponse.added }} hotspots, updated {{ hotspotResponse.updated }} hotspots.</p>
-          </div>
-
-          <div v-if="hotspotError" class="mt-3 p-3 bg-error/20 rounded">
-            <p class="text-error font-semibold">Error:</p>
-            <p>{{ hotspotError }}</p>
-        </div>
-      </div>
-</div>
-    </div>
-  </div>
       </template>
+      <!-- end admin -->
+
     </template>
+    <!-- end signed-in -->
 
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useUser } from '~/composables/useUser';
 
-// Auth
-const { loggedIn, user, isAdmin, signInWithGoogle, signInWithApple, signOut } = useUser()
+const { loggedIn, user, isAdmin, signInWithGoogle, signInWithApple, signOut } = useUser();
 
-// Reactive data
+// ---- Data (admin only — only fetched when isAdmin) ----
 const fireData = ref(null);
 const perimeterData = ref(null);
-const loading = ref(false);
+const statsLastUpdated = ref(null);
 
-
-// Admin action states
+// ---- Admin action states ----
 const fireLoading = ref(false);
 const fireError = ref(null);
 const fireResponse = ref(null);
@@ -890,76 +970,100 @@ const perimeterLoading = ref(false);
 const perimeterError = ref(null);
 const perimeterResponse = ref(null);
 
-const hotspotLoading = ref(false);
-const hotspotError = ref(null);
-const hotspotResponse = ref(null);
-
-const statsLastUpdated = ref(null);
-
-// Helper function to safely get array from data
+// ---- Helpers ----
 function getFiresArray() {
   if (!fireData.value) return [];
-  // Handle both array and object with fires property
   return Array.isArray(fireData.value) ? fireData.value : fireData.value.fires || [];
 }
 
 function getPerimetersArray() {
   if (!perimeterData.value) return [];
-  // Handle both array and object with perimeters property
   return Array.isArray(perimeterData.value) ? perimeterData.value : perimeterData.value.perimeters || [];
 }
 
-// Computed properties for statistics
+// ---- Computed stats ----
 const totalFires = computed(() => getFiresArray().length);
 
-const activeFiresCount = computed(() => {
-  const fires = getFiresArray();
-  return fires.filter(fire => {
-    const containment = fire.properties?.containment;
-    return containment !== null && containment !== undefined && containment < 100;
-  }).length;
-});
+const activeFiresCount = computed(() =>
+  getFiresArray().filter(f => {
+    const c = f.properties?.containment;
+    return c !== null && c !== undefined && c < 100;
+  }).length
+);
 
 const totalPerimeters = computed(() => getPerimetersArray().length);
 
-const prescribedFiresCount = computed(() => {
-  const fires = getFiresArray();
-  return fires.filter(fire => 
-    fire.properties?.fireType === 'RX' || 
-    fire.properties?.status === 'Prescribed'
-  ).length;
-});
+const prescribedFiresCount = computed(() =>
+  getFiresArray().filter(f =>
+    f.properties?.fireType === 'RX' || f.properties?.status === 'Prescribed'
+  ).length
+);
 
-const containedFiresCount = computed(() => {
-  const fires = getFiresArray();
-  return fires.filter(fire => 
-    fire.properties?.containment === 100
-  ).length;
-});
+const containedFiresCount = computed(() =>
+  getFiresArray().filter(f => f.properties?.containment === 100).length
+);
 
-const largeFiresCount = computed(() => {
-  const fires = getFiresArray();
-  return fires.filter(fire => 
-    (fire.properties?.area || 0) > 10000
-  ).length;
-});
+const largeFiresCount = computed(() =>
+  getFiresArray().filter(f => (f.properties?.area || 0) > 10000).length
+);
 
 const averageContainment = computed(() => {
-  const fires = getFiresArray();
-  if (fires.length === 0) return 0;
-  
-  const validFires = fires.filter(fire => 
-    fire.properties?.containment !== null && 
-    fire.properties?.containment !== undefined
+  const valid = getFiresArray().filter(f =>
+    f.properties?.containment !== null && f.properties?.containment !== undefined
   );
-  
-  if (validFires.length === 0) return 0;
-  
-  const totalContainment = validFires.reduce((sum, fire) => 
-    sum + fire.properties.containment, 0
-  );
-  
-  return Math.round(totalContainment / validFires.length);
+  if (!valid.length) return 0;
+  return Math.round(valid.reduce((sum, f) => sum + f.properties.containment, 0) / valid.length);
+});
+
+const matchedPerimetersCount = computed(() => {
+  const fireIds = new Set(getFiresArray().map(f => f.properties?.sourceId).filter(Boolean));
+  return getPerimetersArray().filter(p => fireIds.has(p.properties?.sourceId)).length;
+});
+
+const orphanedPerimetersCount = computed(() => {
+  const fireIds = new Set(getFiresArray().map(f => f.properties?.sourceId).filter(Boolean));
+  return getPerimetersArray().filter(p => !fireIds.has(p.properties?.sourceId)).length;
+});
+
+const orphanedPercentage = computed(() => {
+  const total = totalPerimeters.value;
+  return total === 0 ? 0 : Math.round((orphanedPerimetersCount.value / total) * 100);
+});
+
+// ---- Data fetching (admin only) ----
+async function fetchAdminData() {
+  const [firesRes, perimetersRes] = await Promise.all([
+    $fetch('/api/map-data'),
+    $fetch('/api/perimeter'),
+  ]);
+  fireData.value = firesRes;
+  perimeterData.value = perimetersRes;
+  statsLastUpdated.value = new Date().toLocaleString();
+}
+
+async function renewFires() {
+  fireLoading.value = true;
+  fireError.value = null;
+  fireResponse.value = null;
+  try {
+    const res = await $fetch('/api/fire', {
+      method: 'POST',
+      body: { action: 'renew' },
+    });
+    fireResponse.value = res.data;
+    await fetchAdminData();
+  } catch (err) {
+    fireError.value = err?.data?.statusMessage || err.message || 'Unknown error';
+  } finally {
+    fireLoading.value = false;
+  }
+}
+
+async function renewPerimeters() {
+  perimeterLoading.value = true;
+  perimeterError.value = null;
+  perimeterResponse.value = null;
+  try {
 ```
 
 ### ./app/composables/useApiData.js
@@ -1147,6 +1251,47 @@ export function useFireData() {
 
 ```
 
+### ./app/composables/useUser.js
+```javascript
+import { computed } from 'vue';
+
+export function useUser() {
+    const {
+        loggedIn,
+        user,
+        session,
+        fetch: refreshSession,
+        clear,
+    } = useUserSession();
+
+    async function signInWithGoogle() {
+        await navigateTo('/auth/google', { external: true });
+    }
+
+    // async function signInWithApple() {
+    //     await navigateTo('/auth/apple', { external: true });
+    // }
+
+    async function signOut() {
+        await navigateTo('/auth/logout', { external: true });
+    }
+
+    const isAdmin = computed(() => user.value?.isAdmin === true);
+
+    return {
+        loggedIn,
+        user,
+        session,
+        isAdmin,
+        refreshSession,
+        signInWithGoogle,
+        // signInWithApple,
+        signOut,
+    };
+}
+
+```
+
 ### ./app/composables/useMap.js
 ```javascript
 import { ref, onUnmounted } from 'vue';
@@ -1186,6 +1331,13 @@ export function useMap() {
             mapError.value =
                 'Mapbox token not configured. Please check your environment variables.';
             console.error('Mapbox Token missing!');
+            return;
+        }
+
+        if (!mapboxgl.supported()) {
+            mapError.value =
+                'WebGL is not enabled on your device or browser. To view the map, try enabling hardware acceleration in your browser settings, or open this page in Chrome.';
+            console.error('WebGL not supported');
             return;
         }
 
@@ -1442,13 +1594,6 @@ export function useMap() {
                     'circle-radius': [
                         'interpolate',
                         ['linear'],
-                        ['get', 'brightness'],
-                        300,
-                        3, // Min brightness = small circle
-                        370,
-                        8, // Max brightness = larger circle
-                    ],
-                    'circle-color': [
 ```
 
 ### ./server/models/FirePoint.js
@@ -2434,6 +2579,109 @@ export default defineNitroPlugin(async () => {
   } catch (error) {
     console.error('Failed to connect to database on startup:', error);
   }
+});
+
+```
+
+### ./server/middleware/adminAuth.js
+```javascript
+// server/middleware/adminAuth.js
+
+// Routes + methods that require admin access
+const PROTECTED = [
+    { path: '/api/fire', method: 'POST' },
+    { path: '/api/perimeter', method: 'POST' },
+    { path: '/api/fire', method: 'DELETE' },
+    { path: '/api/perimeter', method: 'DELETE' },
+];
+
+export default defineEventHandler(async event => {
+    const { method, path } = event;
+
+    const isProtected = PROTECTED.some(
+        rule => path.startsWith(rule.path) && method === rule.method
+    );
+
+    if (!isProtected) return; // Not a protected route — carry on
+
+    // Path 1: machine-to-machine (GitHub Actions scheduler)
+    const adminKey = getHeader(event, 'x-admin-key');
+    const { adminSecret } = useRuntimeConfig(event);
+
+    if (adminSecret && adminKey === adminSecret) return; // Authorized
+
+    // Path 2: browser session (human admin)
+    const session = await getUserSession(event);
+
+    if (session?.user?.isAdmin === true) {
+        // Re-verify isAdmin from DB — don't trust cookie alone for write operations
+        const User = (await import('../models/User.js')).default;
+        const dbUser = await User.findById(session.user.id).select('isAdmin');
+
+        if (dbUser?.isAdmin === true) return; // Authorized
+    }
+
+    // Neither path passed
+    throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized',
+    });
+});
+
+```
+
+### ./server/routes/auth/google.get.js
+```javascript
+import User from '../../models/User.js';
+
+export default defineOAuthGoogleEventHandler({
+    async onSuccess(event, { user: googleUser }) {
+        // Find or create user in MongoDB
+        let user = await User.findOne({ email: googleUser.email });
+
+        if (!user) {
+            user = await User.create({
+                email: googleUser.email,
+                name: googleUser.name,
+                avatar: googleUser.picture,
+                provider: 'google',
+            });
+        } else {
+            // Refresh name/avatar and record login time
+            user.name = googleUser.name;
+            user.avatar = googleUser.picture;
+            user.lastLoginAt = new Date();
+            await user.save();
+        }
+
+        // Store minimal session data — don't store isAdmin in the cookie,
+        // always re-check from DB on sensitive operations
+        await setUserSession(event, {
+            user: {
+                id: user._id.toString(),
+                email: user.email,
+                name: user.name,
+                avatar: user.avatar,
+                isAdmin: user.isAdmin,
+            },
+        });
+
+        return sendRedirect(event, '/');
+    },
+
+    onError(event, error) {
+        console.error('Google OAuth error:', error);
+        return sendRedirect(event, '/?authError=google');
+    },
+});
+
+```
+
+### ./server/routes/auth/logout.get.js
+```javascript
+export default defineEventHandler(async event => {
+    await clearUserSession(event);
+    return sendRedirect(event, '/');
 });
 
 ```

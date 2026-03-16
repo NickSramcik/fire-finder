@@ -24,9 +24,12 @@ const CONFIG = {
         './app/composables/useApiData.js',
         './app/composables/useFireData.js',
         './app/composables/useLocalCache.js',
+        './app/composables/useUser.js',
+        // './app/composables/useHotspotData.js',
         './app/composables/useMap.js',
         './server/models/FirePoint.js',
         './server/models/Perimeter.js',
+        './server/models/User.js.js',
         './server/api/fire.js',
         './server/api/perimeter.js',
         './server/api/feed.js',
@@ -37,7 +40,9 @@ const CONFIG = {
         './server/services/index.js',
         './server/services/PerimeterService.js',
         './server/plugins/database.js',
-        './server/middleware/database.js',
+        './server/middleware/adminAuth.js',
+        './server/routes/auth/google.get.js',
+        './server/routes/auth/logout.get.js',
         './.github/workflows/fly-deploy.yml',
     ]
 };
