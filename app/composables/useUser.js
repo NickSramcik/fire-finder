@@ -10,15 +10,15 @@ export function useUser() {
     } = useUserSession();
 
     async function signInWithGoogle() {
-        await navigateTo('/api/auth/google', { external: true });
+        await navigateTo('/auth/google', { external: true });
     }
 
     // async function signInWithApple() {
-    //     await navigateTo('/api/auth/apple', { external: true });
+    //     await navigateTo('/auth/apple', { external: true });
     // }
 
     async function signOut() {
-        await navigateTo('/api/auth/logout', { external: true });
+        await navigateTo('/auth/logout', { external: true });
     }
 
     const isAdmin = computed(() => user.value?.isAdmin === true);
