@@ -244,6 +244,223 @@ export function useMap() {
         }
     }
 
+    function addHotspotLayer(hotspotData, sourceId = 'hotspots') {
+        if (!map.value || !mapLoaded.value) {
+            console.log('Map not ready for adding hotspot layer');
+            return;
+        }
+
+        if (!hotspotData || !hotspotData.length) {
+            console.log('No hotspot data available for layer');
+            return;
+        }
+
+        try {
+            const geojson = {
+                type: 'FeatureCollection',
+                features: hotspotData.map(hotspot => ({
+                    type: 'Feature',
+                    geometry: hotspot.geometry,
+                    properties: hotspot.properties,
+                })),
+            };
+
+            // Remove existing source/layer if present
+            if (map.value.getSource(sourceId)) {
+                if (map.value.getLayer(`${sourceId}-points`)) {
+                    map.value.removeLayer(`${sourceId}-points`);
+                }
+                if (map.value.getLayer(`${sourceId}-heatmap`)) {
+                    map.value.removeLayer(`${sourceId}-heatmap`);
+                }
+                map.value.removeSource(sourceId);
+            }
+
+            // Add source
+            map.value.addSource(sourceId, {
+                type: 'geojson',
+                data: geojson,
+            });
+
+            // Option 1: Point layer with size based on brightness
+            map.value.addLayer({
+                id: `${sourceId}-points`,
+                type: 'circle',
+                source: sourceId,
+                paint: {
+                    'circle-radius': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'brightness'],
+                        300,
+                        3, // Min brightness = small circle
+                        370,
+                        8, // Max brightness = larger circle
+                    ],
+                    'circle-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'brightness'],
+                        300,
+                        '#ffff00', // Yellow for cooler
+                        320,
+                        '#ff8000', // Orange
+                        340,
+                        '#ff4000', // Red-orange
+                        370,
+                        '#ff0000', // Red for hottest
+                    ],
+                    'circle-opacity': 0.8,
+                    'circle-stroke-width': 1,
+                    'circle-stroke-color': '#ffffff',
+                },
+            });
+
+            // Option 2: Heatmap layer for density visualization
+            map.value.addLayer({
+                id: `${sourceId}-heatmap`,
+                type: 'heatmap',
+                source: sourceId,
+                paint: {
+                    'heatmap-weight': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'brightness'],
+                        300,
+                        0,
+                        370,
+                        1,
+                    ],
+                    'heatmap-intensity': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        0,
+                        1,
+                        9,
+                        3,
+                    ],
+                    'heatmap-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['heatmap-density'],
+                        0,
+                        'rgba(0, 0, 255, 0)',
+                        0.2,
+                        'rgba(0, 255, 255, 0.5)',
+                        0.4,
+                        'rgba(0, 255, 0, 0.5)',
+                        0.6,
+                        'rgba(255, 255, 0, 0.5)',
+                        0.8,
+                        'rgba(255, 165, 0, 0.5)',
+                        1,
+                        'rgba(255, 0, 0, 0.5)',
+                    ],
+                    'heatmap-radius': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        0,
+                        2,
+                        9,
+                        20,
+                    ],
+                    'heatmap-opacity': 0.6,
+                },
+            });
+
+            addedLayers.value.add(`${sourceId}-points`);
+            addedLayers.value.add(`${sourceId}-heatmap`);
+            console.log(
+                `Hotspot layer added with ${hotspotData.length} features`
+            );
+        } catch (err) {
+            console.error('Error adding hotspot layer:', err);
+        }
+    }
+
+    // Add hotspot popup interactivity
+    function addHotspotPopupInteractivity(sourceId = 'hotspots') {
+        if (!map.value) return;
+
+        const layerId = `${sourceId}-points`;
+
+        // Remove existing event listeners
+        map.value.off('click', layerId);
+        map.value.off('mouseenter', layerId);
+        map.value.off('mouseleave', layerId);
+
+        // Click for popup
+        map.value.on('click', layerId, e => {
+            if (!e.features || e.features.length === 0) return;
+
+            document
+                .querySelectorAll('.mapboxgl-popup')
+                .forEach(popup => popup.remove());
+
+            new mapboxgl.Popup({
+                closeButton: false,
+                closeOnClick: true,
+                anchor: 'top-left',
+            })
+                .setLngLat(e.lngLat)
+                .setHTML(createHotspotPopupContent(e.features[0]))
+                .addTo(map.value);
+        });
+
+        // Cursor changes
+        map.value.on('mouseenter', layerId, () => {
+            map.value.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.value.on('mouseleave', layerId, () => {
+            map.value.getCanvas().style.cursor = '';
+        });
+    }
+
+    function createHotspotPopupContent(feature) {
+        const props = feature.properties;
+        const date = new Date(props.acquisitionDate).toLocaleString();
+
+        return `
+      <div class="popup-content">
+        <h3 class="font-bold text-lg">🔥 Infrared Hotspot</h3>
+        <div class="mt-2 space-y-1 text-sm">
+          <p><span class="font-semibold">Brightness:</span> ${
+              props.brightness
+          }K</p>
+          <p><span class="font-semibold">Confidence:</span> ${
+              props.confidence
+          }%</p>
+          <p><span class="font-semibold">Satellite:</span> ${
+              props.satellite
+          }</p>
+          <p><span class="font-semibold">Detected:</span> ${date}</p>
+          <p><span class="font-semibold">Fire Power:</span> ${
+              props.frp || 'N/A'
+          } MW</p>
+        </div>
+      </div>
+    `;
+    }
+
+    // Toggle hotspot layers
+    function toggleHotspotLayer(visible = true) {
+        if (!map.value) return;
+
+        const layers = ['hotspots-points', 'hotspots-heatmap'];
+        layers.forEach(layerId => {
+            if (map.value.getLayer(layerId)) {
+                map.value.setLayoutProperty(
+                    layerId,
+                    'visibility',
+                    visible ? 'visible' : 'none'
+                );
+            }
+        });
+    }
+
     // Add popup interactivity
     function addPopupInteractivity(sourceId = 'fires') {
         if (!map.value) {
@@ -343,6 +560,9 @@ export function useMap() {
         loadMapIcons,
         addFireLayer,
         addPerimeterLayer,
+        addHotspotLayer,
+        addHotspotPopupInteractivity,
+        toggleHotspotLayer,
         addPopupInteractivity,
         destroyMap,
     };

@@ -1,5 +1,5 @@
 # 🗺️ PROJECT BLUEPRINT
-*Generated Oct 13, 2025, 01:32 PM PDT*
+*Generated Mar 15, 2026, 05:29 PM PDT*
 
 ## Overview
 
@@ -15,6 +15,7 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
 📄 .eslintignore
 📁 .github
   📁 workflows
+    📄 refresh-fire-data.yml
 📄 BLUEPRINT.md
 📄 Dockerfile
 📄 README.md
@@ -32,7 +33,9 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
   📁 composables
     📄 useApiData.js
     📄 useFireData.js
+    📄 useHotspotData.js
     📄 useMap.js
+    📄 useUser.js
   📁 pages
     📄 index.vue
 📄 buildBlueprint.mjs
@@ -56,16 +59,22 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
       📄 index.post.js
     📄 feed.js
     📄 fire.js
+    📄 hotspots.js
     📄 map-data.js
     📄 perimeter.js
+  📁 middleware
+    📄 adminAuth.js
   📁 models
     📄 Data.js
     📄 FirePoint.js
+    📄 Hotspot.js
     📄 Perimeter.js
+    📄 User.js
   📁 plugins
     📄 database.js
   📁 services
     📄 FireService.js
+    📄 HotspotService.js
     📄 PerimeterService.js
   📄 tsconfig.json
   📁 utils
@@ -94,9 +103,11 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
     "@mapbox/mapbox-gl-geocoder": "^4.7.4",
     "@nuxt/eslint": "^1.9.0",
     "@nuxtjs/color-mode": "^3.5.2",
+    "csv-parse": "^6.1.0",
     "eslint": "^9.35.0",
     "mongoose": "^8.18.0",
     "nuxt": "^4.1.0",
+    "nuxt-auth-utils": "^0.5.29",
     "nuxt-mapbox": "^1.5.0",
     "typescript": "^5.9.2",
     "vue": "^3.5.20",
@@ -122,12 +133,24 @@ export default defineNuxtConfig({
     'nuxt-mapbox',
     '@nuxt/eslint',
     '@nuxtjs/color-mode',
+    'nuxt-auth-utils',
   ],
   tailwindcss: {
     exposeConfig: true,
     viewer: true,
   },
   runtimeConfig: {
+    adminSecret: process.env.ADMIN_SECRET,
+    oauth: {
+      google: {
+        clientId: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID,
+        clientSecret: process.env.NUXT_OAUTH_GOOGLE_CLIENT_SECRET,
+      },
+      apple: {
+        clientId: process.env.NUXT_OAUTH_APPLE_CLIENT_ID,
+        clientSecret: process.env.NUXT_OAUTH_APPLE_CLIENT_SECRET,
+      },
+    },
     public: {
       mapboxToken: process.env.PUBLIC_MAPBOX_TOKEN,
     },
@@ -637,8 +660,46 @@ button.active {
 
 ### ./app/components/UserProfile.vue
 ```javascript
-<template>
+<!-- eslint-disable @typescript-eslint/no-unused-vars -->
+ <template>
   <div class="p-6 max-w-4xl mx-auto">
+
+    <!-- Guest state -->
+    <div v-if="!loggedIn" class="text-center py-16">
+      <div class="text-5xl mb-4">🔥</div>
+      <h2 class="text-2xl font-bold mb-2">Sign in to Fire Finder</h2>
+      <p class="text-base-content/70 mb-6 max-w-sm mx-auto">
+        Save your home location and preferences. The map always works without an account.
+      </p>
+      <div class="flex flex-col gap-3 max-w-xs mx-auto">
+        <button class="btn btn-outline w-full" @click="signInWithGoogle">
+          Continue with Google
+        </button>
+        <button class="btn btn-outline w-full" @click="signInWithApple">
+          Continue with Apple
+        </button>
+      </div>
+    </div>
+
+    <!-- Signed-in state -->
+    <template v-else>
+      <h2 class="text-2xl font-bold mb-6">Profile</h2>
+
+      <!-- Settings panel — visible to all signed-in users -->
+      <div class="card bg-base-200 mb-6">
+        <div class="card-body">
+          <h3 class="card-title">Settings</h3>
+          <!-- Home location, preferences, etc. go here -->
+          <p class="text-sm text-base-content/70">Settings coming soon.</p>
+          <button class="btn btn-ghost btn-sm w-fit mt-2" @click="signOut">
+            Sign out
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin panel — only rendered for admins -->
+      <template v-if="isAdmin">
+        <div class="p-6 max-w-4xl mx-auto">
     <h2 class="text-2xl font-bold mb-6">Admin Dashboard</h2>
 
     <!-- Stats Overview -->
@@ -774,17 +835,51 @@ button.active {
           </div>
         </div>
       </div>
+
+      <!-- Hotspot Data Update -->
+      <div class="card bg-base-200">
+        <div class="card-body">
+          <h3 class="card-title">🔥 Hotspot Data</h3>
+          <p class="text-sm mb-4">Update infrared hotspot data from NASA FIRMS</p>
+
+          <button 
+            :disabled="hotspotLoading"
+            class="btn btn-accent w-full md:w-auto"
+            @click="renewHotspots" 
+          >
+            {{ hotspotLoading ? 'Updating...' : 'Renew Hotspot Data' }}
+          </button>
+        
+          <div v-if="hotspotResponse" class="mt-3 p-3 bg-success/20 rounded">
+            <p class="text-success font-semibold">Success!</p>
+            <p>Added {{ hotspotResponse.added }} hotspots, updated {{ hotspotResponse.updated }} hotspots.</p>
+          </div>
+
+          <div v-if="hotspotError" class="mt-3 p-3 bg-error/20 rounded">
+            <p class="text-error font-semibold">Error:</p>
+            <p>{{ hotspotError }}</p>
+        </div>
+      </div>
+</div>
     </div>
+  </div>
+      </template>
+    </template>
+
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 
+// Auth
+const { loggedIn, user, isAdmin, signInWithGoogle, signInWithApple, signOut } = useUser()
+
 // Reactive data
 const fireData = ref(null);
 const perimeterData = ref(null);
 const loading = ref(false);
+
 
 // Admin action states
 const fireLoading = ref(false);
@@ -794,6 +889,10 @@ const fireResponse = ref(null);
 const perimeterLoading = ref(false);
 const perimeterError = ref(null);
 const perimeterResponse = ref(null);
+
+const hotspotLoading = ref(false);
+const hotspotError = ref(null);
+const hotspotResponse = ref(null);
 
 const statsLastUpdated = ref(null);
 
@@ -861,82 +960,6 @@ const averageContainment = computed(() => {
   );
   
   return Math.round(totalContainment / validFires.length);
-});
-
-// Perimeter matching logic
-const matchedPerimetersCount = computed(() => {
-  const fires = getFiresArray();
-  const perimeters = getPerimetersArray();
-  
-  if (fires.length === 0 || perimeters.length === 0) return 0;
-  
-  const fireSourceIds = new Set(
-    fires.map(fire => fire.properties?.sourceId).filter(Boolean)
-  );
-  
-  return perimeters.filter(perimeter => 
-    fireSourceIds.has(perimeter.properties?.sourceId)
-  ).length;
-});
-
-const orphanedPerimetersCount = computed(() => {
-  const fires = getFiresArray();
-  const perimeters = getPerimetersArray();
-  
-  if (fires.length === 0 || perimeters.length === 0) return 0;
-  
-  const fireSourceIds = new Set(
-    fires.map(fire => fire.properties?.sourceId).filter(Boolean)
-  );
-  
-  return perimeters.filter(perimeter => 
-    !fireSourceIds.has(perimeter.properties?.sourceId)
-  ).length;
-});
-
-const orphanedPercentage = computed(() => {
-  const total = totalPerimeters.value;
-  if (total === 0) return 0;
-  return Math.round((orphanedPerimetersCount.value / total) * 100);
-});
-
-// Update stats timestamp
-function updateStatsTimestamp() {
-  statsLastUpdated.value = new Date().toLocaleString();
-}
-
-// Data fetching functions
-async function fetchFires() {
-  loading.value = true;
-  try {
-    const response = await $fetch('/api/map-data');
-    fireData.value = response;
-    updateStatsTimestamp();
-  } catch (error) {
-    console.error('Error fetching fires:', error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function fetchPerimeters() {
-  loading.value = true;
-  try {
-    const response = await $fetch('/api/perimeter');
-    perimeterData.value = response;
-    updateStatsTimestamp();
-  } catch (error) {
-    console.error('Error fetching perimeters:', error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-// Load initial data
-onMounted(async () => {
-  await Promise.all([fetchFires(), fetchPerimeters()]);
-});
-
 ```
 
 ### ./app/composables/useApiData.js
@@ -1372,60 +1395,60 @@ export function useMap() {
         }
     }
 
-    // Add popup interactivity
-    function addPopupInteractivity(sourceId = 'fires') {
-        if (!map.value) {
-            console.log('Map not ready for adding interactivity');
+    function addHotspotLayer(hotspotData, sourceId = 'hotspots') {
+        if (!map.value || !mapLoaded.value) {
+            console.log('Map not ready for adding hotspot layer');
             return;
         }
 
-        const layerId = `${sourceId}-points`;
+        if (!hotspotData || !hotspotData.length) {
+            console.log('No hotspot data available for layer');
+            return;
+        }
 
-        // Remove existing event listeners to prevent duplicates
-        map.value.off('click', layerId);
-        map.value.off('mouseenter', layerId);
-        map.value.off('mouseleave', layerId);
+        try {
+            const geojson = {
+                type: 'FeatureCollection',
+                features: hotspotData.map(hotspot => ({
+                    type: 'Feature',
+                    geometry: hotspot.geometry,
+                    properties: hotspot.properties,
+                })),
+            };
 
-        // Click for popup
-        map.value.on('click', layerId, e => {
-            if (!e.features || e.features.length === 0) return;
-
-            // Remove any existing popups
-            document
-                .querySelectorAll('.mapboxgl-popup')
-                .forEach(popup => popup.remove());
-
-            new mapboxgl.Popup({
-                closeButton: false,
-                closeOnClick: true,
-                anchor: 'top-left',
-            })
-                .setLngLat(e.lngLat)
-                .setHTML(createPopupContent(e.features[0]))
-                .addTo(map.value);
-        });
-
-        // Cursor changes
-        map.value.on('mouseenter', layerId, () => {
-            if (map.value) {
-                map.value.getCanvas().style.cursor = 'pointer';
+            // Remove existing source/layer if present
+            if (map.value.getSource(sourceId)) {
+                if (map.value.getLayer(`${sourceId}-points`)) {
+                    map.value.removeLayer(`${sourceId}-points`);
+                }
+                if (map.value.getLayer(`${sourceId}-heatmap`)) {
+                    map.value.removeLayer(`${sourceId}-heatmap`);
+                }
+                map.value.removeSource(sourceId);
             }
-        });
 
-        map.value.on('mouseleave', layerId, () => {
-            if (map.value) {
-                map.value.getCanvas().style.cursor = '';
-            }
-        });
-    }
+            // Add source
+            map.value.addSource(sourceId, {
+                type: 'geojson',
+                data: geojson,
+            });
 
-    function createPopupContent(feature) {
-        const props = feature.properties;
-        return `
-      <div class="popup-content">
-        <h3 class="font-bold text-lg">${props.name || 'Unknown Fire'}</h3>
-        <p class="mt-2"><span class="font-semibold">Status:</span> ${
-            props.status || 'Unknown'
+            // Option 1: Point layer with size based on brightness
+            map.value.addLayer({
+                id: `${sourceId}-points`,
+                type: 'circle',
+                source: sourceId,
+                paint: {
+                    'circle-radius': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'brightness'],
+                        300,
+                        3, // Min brightness = small circle
+                        370,
+                        8, // Max brightness = larger circle
+                    ],
+                    'circle-color': [
 ```
 
 ### ./server/models/FirePoint.js

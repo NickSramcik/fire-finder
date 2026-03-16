@@ -32,6 +32,7 @@ jobs:
                                   --retry 2 \
                                   -X POST \
                                   -H "Content-Type: application/json" \
+                                  -H "X-Admin-Key: ${{ secrets.ADMIN_SECRET }}" \
                                   -d '{"action":"renew"}' \
                                   "${{ vars.APP_URL }}/api/fire")
                   echo "Response: $RESPONSE"
@@ -48,6 +49,7 @@ jobs:
                                   --retry 2 \
                                   -X POST \
                                   -H "Content-Type: application/json" \
+                                  -H "X-Admin-Key: ${{ secrets.ADMIN_SECRET }}" \
                                   -d '{"action":"renew"}' \
                                   "${{ vars.APP_URL }}/api/perimeter")
                   echo "Response: $RESPONSE"

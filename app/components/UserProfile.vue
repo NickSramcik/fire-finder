@@ -1,5 +1,43 @@
-<template>
+<!-- eslint-disable @typescript-eslint/no-unused-vars -->
+ <template>
   <div class="p-6 max-w-4xl mx-auto">
+
+    <!-- Guest state -->
+    <div v-if="!loggedIn" class="text-center py-16">
+      <div class="text-5xl mb-4">🔥</div>
+      <h2 class="text-2xl font-bold mb-2">Sign in to Fire Finder</h2>
+      <p class="text-base-content/70 mb-6 max-w-sm mx-auto">
+        Save your home location and preferences. The map always works without an account.
+      </p>
+      <div class="flex flex-col gap-3 max-w-xs mx-auto">
+        <button class="btn btn-outline w-full" @click="signInWithGoogle">
+          Continue with Google
+        </button>
+        <button class="btn btn-outline w-full" @click="signInWithApple">
+          Continue with Apple
+        </button>
+      </div>
+    </div>
+
+    <!-- Signed-in state -->
+    <template v-else>
+      <h2 class="text-2xl font-bold mb-6">Profile</h2>
+
+      <!-- Settings panel — visible to all signed-in users -->
+      <div class="card bg-base-200 mb-6">
+        <div class="card-body">
+          <h3 class="card-title">Settings</h3>
+          <!-- Home location, preferences, etc. go here -->
+          <p class="text-sm text-base-content/70">Settings coming soon.</p>
+          <button class="btn btn-ghost btn-sm w-fit mt-2" @click="signOut">
+            Sign out
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin panel — only rendered for admins -->
+      <template v-if="isAdmin">
+        <div class="p-6 max-w-4xl mx-auto">
     <h2 class="text-2xl font-bold mb-6">Admin Dashboard</h2>
 
     <!-- Stats Overview -->
@@ -135,17 +173,51 @@
           </div>
         </div>
       </div>
+
+      <!-- Hotspot Data Update -->
+      <div class="card bg-base-200">
+        <div class="card-body">
+          <h3 class="card-title">🔥 Hotspot Data</h3>
+          <p class="text-sm mb-4">Update infrared hotspot data from NASA FIRMS</p>
+
+          <button 
+            :disabled="hotspotLoading"
+            class="btn btn-accent w-full md:w-auto"
+            @click="renewHotspots" 
+          >
+            {{ hotspotLoading ? 'Updating...' : 'Renew Hotspot Data' }}
+          </button>
+        
+          <div v-if="hotspotResponse" class="mt-3 p-3 bg-success/20 rounded">
+            <p class="text-success font-semibold">Success!</p>
+            <p>Added {{ hotspotResponse.added }} hotspots, updated {{ hotspotResponse.updated }} hotspots.</p>
+          </div>
+
+          <div v-if="hotspotError" class="mt-3 p-3 bg-error/20 rounded">
+            <p class="text-error font-semibold">Error:</p>
+            <p>{{ hotspotError }}</p>
+        </div>
+      </div>
+</div>
     </div>
+  </div>
+      </template>
+    </template>
+
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 
+// Auth
+const { loggedIn, user, isAdmin, signInWithGoogle, signInWithApple, signOut } = useUser()
+
 // Reactive data
 const fireData = ref(null);
 const perimeterData = ref(null);
 const loading = ref(false);
+
 
 // Admin action states
 const fireLoading = ref(false);
@@ -155,6 +227,10 @@ const fireResponse = ref(null);
 const perimeterLoading = ref(false);
 const perimeterError = ref(null);
 const perimeterResponse = ref(null);
+
+const hotspotLoading = ref(false);
+const hotspotError = ref(null);
+const hotspotResponse = ref(null);
 
 const statsLastUpdated = ref(null);
 
@@ -353,6 +429,42 @@ async function renewPerimeters() {
     perimeterError.value = err.message;
   } finally {
     perimeterLoading.value = false;
+  }
+}
+
+async function renewHotspots() {
+  hotspotLoading.value = true;
+  hotspotError.value = null;
+  hotspotResponse.value = null;
+  
+  try {
+    const response = await $fetch('/api/hotspots', { 
+      method: 'POST',
+      body: { 
+        action: 'renew',
+        area: '-168.576965,3.433917,-31.467590,73.304991', // Focus on Western US
+        days: 2
+      }
+    });
+    hotspotResponse.value = response.data;
+    
+    // Refresh the stats display
+    await fetchHotspotsStats();
+  } catch (error) {
+    hotspotError.value = error.data?.statusMessage || error.message || 'Failed to update hotspots';
+    console.error('Hotspot renewal error:', error);
+  } finally {
+    hotspotLoading.value = false;
+  }
+}
+
+// Add this function to fetch hotspot statistics
+async function fetchHotspotsStats() {
+  try {
+    const stats = await $fetch('/api/hotspots?limit=1&minConfidence=30');
+    // You can process stats here or add specific stats endpoint if needed
+  } catch (error) {
+    console.error('Error fetching hotspot stats:', error);
   }
 }
 </script>
