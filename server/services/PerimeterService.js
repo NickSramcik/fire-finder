@@ -59,26 +59,52 @@ export class PerimeterService {
                 .map(p => p.properties.poly_IncidentName)
                 .join(', ')}`
         );
+
+        const operations = perimeterData.map(rawPerimeter => {
+            const processedPerimeter = this.processPerimeter(rawPerimeter);
+            return {
+                updateOne: {
+                    filter: {
+                        'properties.sourceId':
+                            processedPerimeter.properties.sourceId,
+                    },
+                    update: { $set: processedPerimeter },
+                    upsert: true,
+                },
+            };
+        });
+
         let added = 0,
             updated = 0,
             failed = [];
 
-        for (const rawPerimeter of perimeterData) {
-            const processedPerimeter = this.processPerimeter(rawPerimeter);
-            const sourceId = processedPerimeter.properties.sourceId;
-
-            try {
-                const existing = await this.findOne(sourceId);
-                if (existing) {
-                    await this.update(sourceId, processedPerimeter);
-                    updated++;
-                } else {
-                    await this.create(processedPerimeter);
-                    added++;
-                }
-            } catch (error) {
-                failed.push(processedPerimeter.properties.name);
-                console.error(`Error processing perimeter ${sourceId}:`, error);
+        try {
+            const result = await this.model.bulkWrite(operations, {
+                ordered: false,
+            });
+            added = result.upsertedCount;
+            updated = result.modifiedCount;
+        } catch (error) {
+            if (error.writeErrors?.length) {
+                failed = error.writeErrors.map(
+                    e =>
+                        operations[e.index]?.updateOne?.update?.$set?.properties
+                            ?.name ?? 'unknown'
+                );
+                added = error.result?.upsertedCount ?? 0;
+                updated = error.result?.modifiedCount ?? 0;
+                error.writeErrors.forEach(e =>
+                    console.error(
+                        `Error processing perimeter ${
+                            operations[e.index]?.updateOne?.filter?.[
+                                'properties.sourceId'
+                            ]
+                        }:`,
+                        e.errmsg
+                    )
+                );
+            } else {
+                console.error('Error during bulkWrite for perimeters:', error);
             }
         }
 
@@ -114,6 +140,7 @@ export class PerimeterService {
     processPerimeter(rawPerimeter) {
         const processedPerimeter = {
             ...rawPerimeter,
+            geometry: this.normalizeGeometry(rawPerimeter.geometry),
             properties: {
                 sourceId: rawPerimeter.properties.attr_UniqueFireIdentifier,
                 name: this.fixPerimeterName(rawPerimeter),
@@ -122,6 +149,44 @@ export class PerimeterService {
         };
 
         return processedPerimeter;
+    }
+
+    // Normalize incoming GeoJSON geometry to MultiPolygon with correctly-wound
+    // rings. MongoDB's 2dsphere index requires the GeoJSON right-hand rule:
+    // exterior rings must be counterclockwise (positive signed area) and
+    // interior rings must be clockwise (negative signed area). The NIFC API
+    // doesn't guarantee this, so we re-wind any rings that violate it.
+    // Interior rings (unburned islands inside a perimeter) are preserved.
+    normalizeGeometry(geometry) {
+        const signedArea = ring => {
+            let area = 0;
+            for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                area += (ring[j][0] + ring[i][0]) * (ring[j][1] - ring[i][1]);
+            }
+            return area / 2;
+        };
+
+        const fixPolygon = rings =>
+            rings.map((ring, i) => {
+                const shouldBeCCW = i === 0; // exterior ring
+                const isCCW = signedArea(ring) > 0;
+                return shouldBeCCW === isCCW ? ring : [...ring].reverse();
+            });
+
+        if (geometry.type === 'Polygon') {
+            return {
+                type: 'MultiPolygon',
+                coordinates: [fixPolygon(geometry.coordinates)],
+            };
+        }
+        if (geometry.type === 'MultiPolygon') {
+            return {
+                type: 'MultiPolygon',
+                coordinates: geometry.coordinates.map(fixPolygon),
+            };
+        }
+        // Unknown type — pass through unchanged rather than silently dropping it.
+        return geometry;
     }
 
     fixPerimeterName(rawPerimeter) {

@@ -1,5 +1,5 @@
 # 🗺️ PROJECT BLUEPRINT
-*Generated Mar 16, 2026, 01:05 PM PDT*
+*Generated Mar 16, 2026, 02:12 PM PDT*
 
 ## Overview
 
@@ -954,7 +954,7 @@ button.active {
 import { ref, computed, onMounted } from 'vue';
 import { useUser } from '~/composables/useUser';
 
-const { loggedIn, user, isAdmin, signInWithGoogle, signInWithApple, signOut } = useUser();
+const { loggedIn, user, isAdmin, signInWithGoogle, signOut } = useUser();
 
 // ---- Data (admin only — only fetched when isAdmin) ----
 const fireData = ref(null);
@@ -2591,8 +2591,10 @@ export default defineNitroPlugin(async () => {
 const PROTECTED = [
     { path: '/api/fire', method: 'POST' },
     { path: '/api/perimeter', method: 'POST' },
+    { path: '/api/hotspots', method: 'POST' },
     { path: '/api/fire', method: 'DELETE' },
     { path: '/api/perimeter', method: 'DELETE' },
+    { path: '/api/hotspots', method: 'DELETE' },
 ];
 
 export default defineEventHandler(async event => {
@@ -2602,30 +2604,61 @@ export default defineEventHandler(async event => {
         rule => path.startsWith(rule.path) && method === rule.method
     );
 
-    if (!isProtected) return; // Not a protected route — carry on
+    if (!isProtected) return;
 
     // Path 1: machine-to-machine (GitHub Actions scheduler)
     const adminKey = getHeader(event, 'x-admin-key');
     const { adminSecret } = useRuntimeConfig(event);
 
-    if (adminSecret && adminKey === adminSecret) return; // Authorized
+    if (adminKey) {
+        if (!adminSecret) {
+            throw createError({
+                statusCode: 500,
+                statusMessage:
+                    'Server misconfiguration: ADMIN_SECRET is not set',
+            });
+        }
+        if (adminKey === adminSecret) return; // Authorized
+        throw createError({
+            statusCode: 401,
+            statusMessage: 'Unauthorized: invalid admin key',
+        });
+    }
 
     // Path 2: browser session (human admin)
     const session = await getUserSession(event);
 
-    if (session?.user?.isAdmin === true) {
-        // Re-verify isAdmin from DB — don't trust cookie alone for write operations
-        const User = (await import('../models/User.js')).default;
-        const dbUser = await User.findById(session.user.id).select('isAdmin');
-
-        if (dbUser?.isAdmin === true) return; // Authorized
+    if (!session?.user) {
+        throw createError({
+            statusCode: 401,
+            statusMessage: 'Unauthorized: not signed in',
+        });
     }
 
-    // Neither path passed
-    throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized',
-    });
+    if (!session.user.isAdmin) {
+        throw createError({
+            statusCode: 403,
+            statusMessage: 'Unauthorized user',
+        });
+    }
+
+    // Re-verify isAdmin from DB — don't trust cookie alone for write operations
+    const User = (await import('../models/User.js')).default;
+    const dbUser = await User.findById(session.user.id).select('isAdmin');
+
+    if (!dbUser) {
+        throw createError({
+            statusCode: 401,
+            statusMessage: 'Unauthorized: user not found',
+        });
+    }
+
+    if (!dbUser.isAdmin) {
+        throw createError({
+            statusCode: 403,
+            statusMessage: 'Unauthorized user',
+        });
+    }
 });
 
 ```

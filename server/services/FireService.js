@@ -54,24 +54,46 @@ export class FireService {
     // External Data Integration
     async renewFires() {
         const fireData = await this.fetchFirePoints();
+
+        const operations = fireData.map(rawFire => {
+            const processedFire = this.processFire(rawFire);
+            return {
+                updateOne: {
+                    filter: {
+                        'properties.sourceId':
+                            processedFire.properties.sourceId,
+                    },
+                    update: { $set: processedFire },
+                    upsert: true,
+                },
+            };
+        });
+
         let added = 0,
             updated = 0;
 
-        for (const rawFire of fireData) {
-            const processedFire = this.processFire(rawFire);
-            const sourceId = processedFire.properties.sourceId;
-
-            try {
-                const existing = await this.findOne(sourceId);
-                if (existing) {
-                    await this.update(sourceId, processedFire);
-                    updated++;
-                } else {
-                    await this.create(processedFire);
-                    added++;
-                }
-            } catch (error) {
-                console.error(`Error processing fire ${sourceId}:`, error);
+        try {
+            const result = await this.model.bulkWrite(operations, {
+                ordered: false,
+            });
+            added = result.upsertedCount;
+            updated = result.modifiedCount;
+        } catch (error) {
+            if (error.writeErrors?.length) {
+                error.writeErrors.forEach(e =>
+                    console.error(
+                        `Error processing fire ${
+                            operations[e.index]?.updateOne?.filter?.[
+                                'properties.sourceId'
+                            ]
+                        }:`,
+                        e.errmsg
+                    )
+                );
+                added = error.result?.upsertedCount ?? 0;
+                updated = error.result?.modifiedCount ?? 0;
+            } else {
+                console.error('Error during bulkWrite for fires:', error);
             }
         }
 
@@ -300,13 +322,6 @@ export class FireService {
             dbQuery['properties.area'] = {
                 ...dbQuery['properties.area'],
                 $gte: parseInt(apiQuery.minArea),
-            };
-        }
-
-        if (apiQuery.maxArea) {
-            dbQuery['properties.area'] = {
-                ...dbQuery['properties.area'],
-                $lte: parseInt(apiQuery.maxArea),
             };
         }
 
