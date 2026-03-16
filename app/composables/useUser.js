@@ -1,3 +1,5 @@
+import { computed } from 'vue';
+
 export function useUser() {
     const {
         loggedIn,
@@ -8,15 +10,15 @@ export function useUser() {
     } = useUserSession();
 
     async function signInWithGoogle() {
-        await navigateTo('/auth/google', { external: true });
+        await navigateTo('/api/auth/google', { external: true });
     }
 
-    async function signInWithApple() {
-        await navigateTo('/auth/apple', { external: true });
-    }
+    // async function signInWithApple() {
+    //     await navigateTo('/api/auth/apple', { external: true });
+    // }
 
     async function signOut() {
-        await navigateTo('/auth/logout', { external: true });
+        await navigateTo('/api/auth/logout', { external: true });
     }
 
     const isAdmin = computed(() => user.value?.isAdmin === true);
@@ -28,7 +30,7 @@ export function useUser() {
         isAdmin,
         refreshSession,
         signInWithGoogle,
-        signInWithApple,
+        // signInWithApple,
         signOut,
     };
 }

@@ -20,10 +20,10 @@ export default defineNuxtConfig({
         clientId: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID,
         clientSecret: process.env.NUXT_OAUTH_GOOGLE_CLIENT_SECRET,
       },
-      apple: {
-        clientId: process.env.NUXT_OAUTH_APPLE_CLIENT_ID,
-        clientSecret: process.env.NUXT_OAUTH_APPLE_CLIENT_SECRET,
-      },
+      // apple: {
+      //   clientId: process.env.NUXT_OAUTH_APPLE_CLIENT_ID,
+      //   clientSecret: process.env.NUXT_OAUTH_APPLE_CLIENT_SECRET,
+      // },
     },
     public: {
       mapboxToken: process.env.PUBLIC_MAPBOX_TOKEN,
