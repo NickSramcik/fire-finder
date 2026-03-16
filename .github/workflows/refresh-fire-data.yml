@@ -1,41 +1,60 @@
+# .github/workflows/refresh-fire-data.yml
+
 name: Refresh Fire Data
 
 on:
     schedule:
-        - cron: '0 */6 * * *' # Every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
-    workflow_dispatch: # Allow manual trigger from GitHub Actions UI
+        - cron: '0 */6 * * *' # Every 6 hours
+    workflow_dispatch: # Alllow manual trigger from GitHub Actions UI
 
 jobs:
     refresh:
         name: Renew fire and perimeter data
         runs-on: ubuntu-latest
-        timeout-minutes: 10 # Bail out if something hangs for 10 min
+        timeout-minutes: 10
 
         steps:
             - name: Wake app
               run: |
                   echo "Sending wake request to ${{ vars.APP_URL }}"
-                  curl --fail --silent --show-error \
-                       --max-time 30 \
-                       --retry 3 \
-                       --retry-delay 5 \
-                       --retry-connrefused \
-                       "${{ vars.APP_URL }}/" \
-                       -o /dev/null
+                  HTTP_STATUS=$(curl --silent --show-error \
+                                    --max-time 30 \
+                                    --retry 3 \
+                                    --retry-delay 5 \
+                                    --retry-connrefused \
+                                    --write-out "%{http_code}" \
+                                    --output /tmp/wake_response.json \
+                                    "${{ vars.APP_URL }}/")
+                  echo "Status: $HTTP_STATUS"
+                  if [ "$HTTP_STATUS" -ne 200 ]; then
+                    echo "Error: app unreachable, got $HTTP_STATUS"
+                    cat /tmp/wake_response.json
+                    exit 1
+                  fi
                   echo "App is reachable."
 
             - name: Renew fire point data
               run: |
                   echo "Requesting fire data renewal..."
-                  RESPONSE=$(curl --fail --silent --show-error \
-                                  --max-time 60 \
-                                  --retry 2 \
-                                  -X POST \
-                                  -H "Content-Type: application/json" \
-                                  -H "X-Admin-Key: ${{ secrets.ADMIN_SECRET }}" \
-                                  -d '{"action":"renew"}' \
-                                  "${{ vars.APP_URL }}/api/fire")
+                  HTTP_STATUS=$(curl --silent --show-error \
+                                    --max-time 60 \
+                                    --retry 2 \
+                                    --write-out "%{http_code}" \
+                                    --output /tmp/fire_response.json \
+                                    -X POST \
+                                    -H "Content-Type: application/json" \
+                                    -H "X-Admin-Key: ${{ secrets.ADMIN_SECRET }}" \
+                                    -d '{"action":"renew"}' \
+                                    "${{ vars.APP_URL }}/api/fire")
+
+                  RESPONSE=$(cat /tmp/fire_response.json)
+                  echo "Status: $HTTP_STATUS"
                   echo "Response: $RESPONSE"
+
+                  if [ "$HTTP_STATUS" -ne 200 ]; then
+                    echo "Error: expected 200, got $HTTP_STATUS"
+                    exit 1
+                  fi
 
                   ADDED=$(echo "$RESPONSE" | grep -o '"added":[0-9]*' | grep -o '[0-9]*')
                   UPDATED=$(echo "$RESPONSE" | grep -o '"updated":[0-9]*' | grep -o '[0-9]*')
@@ -44,15 +63,25 @@ jobs:
             - name: Renew perimeter data
               run: |
                   echo "Requesting perimeter data renewal..."
-                  RESPONSE=$(curl --fail --silent --show-error \
-                                  --max-time 60 \
-                                  --retry 2 \
-                                  -X POST \
-                                  -H "Content-Type: application/json" \
-                                  -H "X-Admin-Key: ${{ secrets.ADMIN_SECRET }}" \
-                                  -d '{"action":"renew"}' \
-                                  "${{ vars.APP_URL }}/api/perimeter")
+                  HTTP_STATUS=$(curl --silent --show-error \
+                                    --max-time 60 \
+                                    --retry 2 \
+                                    --write-out "%{http_code}" \
+                                    --output /tmp/perimeter_response.json \
+                                    -X POST \
+                                    -H "Content-Type: application/json" \
+                                    -H "X-Admin-Key: ${{ secrets.ADMIN_SECRET }}" \
+                                    -d '{"action":"renew"}' \
+                                    "${{ vars.APP_URL }}/api/perimeter")
+
+                  RESPONSE=$(cat /tmp/perimeter_response.json)
+                  echo "Status: $HTTP_STATUS"
                   echo "Response: $RESPONSE"
+
+                  if [ "$HTTP_STATUS" -ne 200 ]; then
+                    echo "Error: expected 200, got $HTTP_STATUS"
+                    exit 1
+                  fi
 
                   ADDED=$(echo "$RESPONSE" | grep -o '"added":[0-9]*' | grep -o '[0-9]*')
                   UPDATED=$(echo "$RESPONSE" | grep -o '"updated":[0-9]*' | grep -o '[0-9]*')
