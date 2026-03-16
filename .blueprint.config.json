@@ -1,0 +1,48 @@
+{
+    "overview": "Fire Finder — a wildfire mapping app designed to be fast, simple, and reliable. Everything you need in one place.",
+    "priorities": [
+        {
+            "label": "Fast",
+            "description": "Lightweight construction to work on slow internet speeds in rural areas"
+        },
+        {
+            "label": "Simple",
+            "description": "Readable & maintainable code, not over-engineered, easy for anyone to use"
+        },
+        {
+            "label": "Reliable",
+            "description": "Automated data processing and error handling to stay up-to-date on a tight budget without fuss"
+        }
+    ],
+    "showcaseFiles": [
+        "package.json",
+        "nuxt.config.ts",
+        "./app/app.vue",
+        "./app/pages/index.vue",
+        "./app/components/FireMap.vue",
+        "./app/components/FireFeed.vue",
+        "./app/components/NavBar.vue",
+        "./app/components/UserProfile.vue",
+        "./app/composables/useApiData.js",
+        "./app/composables/useFireData.js",
+        "./app/composables/useUser.js",
+        "./app/composables/useMap.js",
+        "./server/models/FirePoint.js",
+        "./server/models/Perimeter.js",
+        "./server/models/User.js",
+        "./server/api/fire.js",
+        "./server/api/perimeter.js",
+        "./server/api/feed.js",
+        "./server/api/map-data.js",
+        "./server/utils/db.js",
+        "./server/utils/cache.js",
+        "./server/services/FireService.js",
+        "./server/services/PerimeterService.js",
+        "//./server/services/HotspotService.js",
+        "./server/plugins/database.js",
+        "./server/middleware/adminAuth.js",
+        "./server/routes/auth/google.get.js",
+        "./server/routes/auth/logout.get.js",
+        "./.github/workflows/refresh-fire-data.yml"
+    ]
+}

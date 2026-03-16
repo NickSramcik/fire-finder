@@ -1,17 +1,30 @@
 # 🗺️ PROJECT BLUEPRINT
-*Generated Mar 16, 2026, 02:12 PM PDT*
+*Generated Mar 16, 2026, 03:24 PM PDT*
 
 ## Overview
 
-Fire Finder designed to make wildfire mapping easy and reliable— Everything you need in one place. 
+Fire Finder — a wildfire mapping app designed to be fast, simple, and reliable. Everything you need in one place.
 
 ## Project Priorities
-- **Fast**: Lightweight construction to work on slow internet speeds in rural areas 
-- **Simple**: Readable & maintainable code, not over-engineered thus easy for the average joe to use
-- **Reliable**: Automated data processing and error handling to stay up to-date on a tight budget without fuss
+- **Fast**: Lightweight construction to work on slow internet speeds in rural areas
+- **Simple**: Readable & maintainable code, not over-engineered, easy for anyone to use
+- **Reliable**: Automated data processing and error handling to stay up-to-date on a tight budget without fuss
 
-## PROJECT STRUCTURE
+## Project Summary
+
+- **7** `.vue` files
+- **1** `.ts` file
+- **28** `.js` files
+- **2** `.mjs` files
+- **4** `.json` files
+- **1** `.yml` file
+- **1** `.css` file
+- **2** `.md` files
+- **28** files in showcase list (1 disabled)
+
+## Project Structure
 ```
+📄 .blueprint.config.json
 📄 .eslintignore
 📁 .github
   📁 workflows
@@ -89,8 +102,10 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
 📄 tsconfig.json
 ```
 
-## KEY FILE CODE EXAMPLES
+## Key Files
+
 ### package.json
+*modified today*
 ```json
 {
   "name": "nuxt-app",
@@ -128,7 +143,8 @@ Fire Finder designed to make wildfire mapping easy and reliable— Everything yo
 ```
 
 ### nuxt.config.ts
-```javascript
+*modified today*
+```typescript
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -164,7 +180,8 @@ export default defineNuxtConfig({
 ```
 
 ### ./app/app.vue
-```javascript
+*modified 6 months ago*
+```vue
 <template>
   <div class="h-full">
     <NavBar :active-tab="activeTab" @switch-tab="switchTab" />
@@ -186,7 +203,8 @@ function switchTab(tab) {
 ```
 
 ### ./app/pages/index.vue
-```javascript
+*modified 6 months ago*
+```vue
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
   <main class="h-full">
@@ -227,7 +245,8 @@ html, body, #app, main {
 ```
 
 ### ./app/components/FireMap.vue
-```javascript
+*modified 5 months ago*
+```vue
 <template>
   <div>
     <div id="map" />
@@ -439,7 +458,8 @@ function dismissDataError() {
 ```
 
 ### ./app/components/FireFeed.vue
-```javascript
+*modified 5 months ago*
+```vue
 <template>
   <div class="p-4">
     <div class="flex justify-between items-center mb-4">
@@ -604,7 +624,8 @@ onMounted(() => {
 ```
 
 ### ./app/components/NavBar.vue
-```javascript
+*modified today*
+```vue
 <template>
   <nav class="navbar">
     <button :class="{ active: activeTab === 'map' }" @click="switchTab('map')">Fire Finder</button>
@@ -763,7 +784,8 @@ button.active {
 ```
 
 ### ./app/components/UserProfile.vue
-```javascript
+*modified today*
+```vue
 <template>
   <div class="p-6 max-w-4xl mx-auto">
 
@@ -1064,9 +1086,11 @@ async function renewPerimeters() {
   perimeterError.value = null;
   perimeterResponse.value = null;
   try {
+// ... (truncated — 19 more lines not shown)
 ```
 
 ### ./app/composables/useApiData.js
+*modified 5 months ago*
 ```javascript
 import { ref } from 'vue';
 
@@ -1130,6 +1154,7 @@ export function useApiData() {
 ```
 
 ### ./app/composables/useFireData.js
+*modified 5 months ago*
 ```javascript
 import { ref, computed } from 'vue';
 import { useApiData } from './useApiData.js';
@@ -1252,6 +1277,7 @@ export function useFireData() {
 ```
 
 ### ./app/composables/useUser.js
+*modified today*
 ```javascript
 import { computed } from 'vue';
 
@@ -1293,6 +1319,7 @@ export function useUser() {
 ```
 
 ### ./app/composables/useMap.js
+*modified today*
 ```javascript
 import { ref, onUnmounted } from 'vue';
 import mapboxgl from 'mapbox-gl';
@@ -1594,9 +1621,11 @@ export function useMap() {
                     'circle-radius': [
                         'interpolate',
                         ['linear'],
+// ... (truncated — 277 more lines not shown)
 ```
 
 ### ./server/models/FirePoint.js
+*modified 6 months ago*
 ```javascript
 import { Schema, model } from 'mongoose';
 
@@ -1640,49 +1669,96 @@ export default model('FirePoint', fireSchema);
 ```
 
 ### ./server/models/Perimeter.js
+*modified today*
 ```javascript
 import { Schema, model } from 'mongoose';
 
 const perimeterSchema = new Schema({
-  type: {
-    type: String,
-    required: true,
-    enum: ['Feature'], 
-  },
-  geometry: {
     type: {
-      type: String,
-      required: true,
-      enum: ['Polygon', 'MultiPolygon'],
+        type: String,
+        required: true,
+        enum: ['Feature'],
     },
-    coordinates: {
-      type: Array,
-      required: true,
+    geometry: {
+        type: {
+            type: String,
+            required: true,
+            enum: ['MultiPolygon'],
+        },
+        coordinates: {
+            type: Array,
+            required: true,
+        },
     },
-  },
-  properties: {
-    name: {
-      type: String,
-      required: true,
+    properties: {
+        name: {
+            type: String,
+            required: true,
+        },
+        sourceId: {
+            type: String,
+            required: true,
+        },
+        lastUpdated: {
+            type: Date,
+            required: true,
+        },
     },
-    sourceId: {
-      type: String,
-      required: true,
-    },
-    lastUpdated: {
-      type: Date,
-      required: true,
-    },
-  },
-}); 
+});
 
-// perimeterSchema.index({ geometry: '2dsphere' }); // Disabled until solution for polygons with holes, breaks this index TODO
+perimeterSchema.index({ geometry: '2dsphere' });
 
 export default model('Perimeter', perimeterSchema);
 
 ```
 
+### ./server/models/User.js
+*modified today*
+```javascript
+import { Schema, model } from 'mongoose';
+
+const userSchema = new Schema({
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true,
+    },
+    name: String,
+    avatar: String,
+    provider: {
+        type: String,
+        enum: ['google', 'apple'],
+        required: true,
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false,
+    },
+    homeLocation: {
+        lat: Number,
+        lng: Number,
+        label: String,
+    },
+    settings: {
+        // Reserved for future user preferences
+    },
+    lastLoginAt: Date,
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
+});
+
+userSchema.index({ email: 1 });
+
+export default model('User', userSchema);
+
+```
+
 ### ./server/api/fire.js
+*modified 5 months ago*
 ```javascript
 import { defineEventHandler, readBody, getQuery } from 'h3';
 import { fireService } from '../services/FireService.js';
@@ -1750,6 +1826,7 @@ export default defineEventHandler(async event => {
 ```
 
 ### ./server/api/perimeter.js
+*modified 5 months ago*
 ```javascript
 import { defineEventHandler, readBody, getQuery } from 'h3';
 import { perimeterService } from '../services/PerimeterService.js';
@@ -1825,6 +1902,7 @@ export default defineEventHandler(async event => {
 ```
 
 ### ./server/api/feed.js
+*modified 5 months ago*
 ```javascript
 import { defineEventHandler, getQuery } from 'h3';
 import { fireService } from '../services/FireService.js'; // FIXED: Direct import
@@ -1859,6 +1937,7 @@ export default defineEventHandler(async event => {
 ```
 
 ### ./server/api/map-data.js
+*modified 5 months ago*
 ```javascript
 import { defineEventHandler, getQuery } from 'h3';
 import { fireService } from '../services/FireService.js';
@@ -1910,6 +1989,7 @@ export default defineEventHandler(async event => {
 ```
 
 ### ./server/utils/db.js
+*modified 5 months ago*
 ```javascript
 import mongoose from 'mongoose';
 
@@ -1948,6 +2028,7 @@ process.on('SIGINT', async () => {
 ```
 
 ### ./server/utils/cache.js
+*modified 5 months ago*
 ```javascript
 class FireCache {
     constructor() {
@@ -1984,6 +2065,7 @@ export const cache = new FireCache();
 ```
 
 ### ./server/services/FireService.js
+*modified today*
 ```javascript
 import FirePoint from '../models/FirePoint.js';
 
@@ -2041,24 +2123,46 @@ export class FireService {
     // External Data Integration
     async renewFires() {
         const fireData = await this.fetchFirePoints();
+
+        const operations = fireData.map(rawFire => {
+            const processedFire = this.processFire(rawFire);
+            return {
+                updateOne: {
+                    filter: {
+                        'properties.sourceId':
+                            processedFire.properties.sourceId,
+                    },
+                    update: { $set: processedFire },
+                    upsert: true,
+                },
+            };
+        });
+
         let added = 0,
             updated = 0;
 
-        for (const rawFire of fireData) {
-            const processedFire = this.processFire(rawFire);
-            const sourceId = processedFire.properties.sourceId;
-
-            try {
-                const existing = await this.findOne(sourceId);
-                if (existing) {
-                    await this.update(sourceId, processedFire);
-                    updated++;
-                } else {
-                    await this.create(processedFire);
-                    added++;
-                }
-            } catch (error) {
-                console.error(`Error processing fire ${sourceId}:`, error);
+        try {
+            const result = await this.model.bulkWrite(operations, {
+                ordered: false,
+            });
+            added = result.upsertedCount;
+            updated = result.modifiedCount;
+        } catch (error) {
+            if (error.writeErrors?.length) {
+                error.writeErrors.forEach(e =>
+                    console.error(
+                        `Error processing fire ${
+                            operations[e.index]?.updateOne?.filter?.[
+                                'properties.sourceId'
+                            ]
+                        }:`,
+                        e.errmsg
+                    )
+                );
+                added = error.result?.upsertedCount ?? 0;
+                updated = error.result?.modifiedCount ?? 0;
+            } else {
+                console.error('Error during bulkWrite for fires:', error);
             }
         }
 
@@ -2263,31 +2367,11 @@ export class FireService {
         if (apiQuery.minLastUpdated) {
             dbQuery['properties.lastUpdated'] = {
                 $gte: new Date(apiQuery.minLastUpdated),
-            };
-        }
-
-        if (apiQuery.maxLastUpdated) {
-            dbQuery['properties.lastUpdated'] = {
-                ...dbQuery['properties.lastUpdated'],
-                $lte: new Date(apiQuery.maxLastUpdated),
-            };
-        }
-
-        // Existence filters
-        if (apiQuery.hasArea === 'true') {
-            dbQuery['properties.area'] = { $exists: true, $ne: null, $gt: 0 };
-        }
-
-        if (apiQuery.hasContainment === 'true') {
-            dbQuery['properties.containment'] = { $exists: true, $ne: null };
-        }
-
-        // Comparison filters
-        if (apiQuery.minArea) {
-            dbQuery['properties.area'] = {
+// ... (truncated — 33 more lines not shown)
 ```
 
 ### ./server/services/PerimeterService.js
+*modified today*
 ```javascript
 import Perimeter from '../models/Perimeter.js';
 
@@ -2350,26 +2434,52 @@ export class PerimeterService {
                 .map(p => p.properties.poly_IncidentName)
                 .join(', ')}`
         );
+
+        const operations = perimeterData.map(rawPerimeter => {
+            const processedPerimeter = this.processPerimeter(rawPerimeter);
+            return {
+                updateOne: {
+                    filter: {
+                        'properties.sourceId':
+                            processedPerimeter.properties.sourceId,
+                    },
+                    update: { $set: processedPerimeter },
+                    upsert: true,
+                },
+            };
+        });
+
         let added = 0,
             updated = 0,
             failed = [];
 
-        for (const rawPerimeter of perimeterData) {
-            const processedPerimeter = this.processPerimeter(rawPerimeter);
-            const sourceId = processedPerimeter.properties.sourceId;
-
-            try {
-                const existing = await this.findOne(sourceId);
-                if (existing) {
-                    await this.update(sourceId, processedPerimeter);
-                    updated++;
-                } else {
-                    await this.create(processedPerimeter);
-                    added++;
-                }
-            } catch (error) {
-                failed.push(processedPerimeter.properties.name);
-                console.error(`Error processing perimeter ${sourceId}:`, error);
+        try {
+            const result = await this.model.bulkWrite(operations, {
+                ordered: false,
+            });
+            added = result.upsertedCount;
+            updated = result.modifiedCount;
+        } catch (error) {
+            if (error.writeErrors?.length) {
+                failed = error.writeErrors.map(
+                    e =>
+                        operations[e.index]?.updateOne?.update?.$set?.properties
+                            ?.name ?? 'unknown'
+                );
+                added = error.result?.upsertedCount ?? 0;
+                updated = error.result?.modifiedCount ?? 0;
+                error.writeErrors.forEach(e =>
+                    console.error(
+                        `Error processing perimeter ${
+                            operations[e.index]?.updateOne?.filter?.[
+                                'properties.sourceId'
+                            ]
+                        }:`,
+                        e.errmsg
+                    )
+                );
+            } else {
+                console.error('Error during bulkWrite for perimeters:', error);
             }
         }
 
@@ -2405,6 +2515,7 @@ export class PerimeterService {
     processPerimeter(rawPerimeter) {
         const processedPerimeter = {
             ...rawPerimeter,
+            geometry: this.normalizeGeometry(rawPerimeter.geometry),
             properties: {
                 sourceId: rawPerimeter.properties.attr_UniqueFireIdentifier,
                 name: this.fixPerimeterName(rawPerimeter),
@@ -2413,6 +2524,44 @@ export class PerimeterService {
         };
 
         return processedPerimeter;
+    }
+
+    // Normalize incoming GeoJSON geometry to MultiPolygon with correctly-wound
+    // rings. MongoDB's 2dsphere index requires the GeoJSON right-hand rule:
+    // exterior rings must be counterclockwise (positive signed area) and
+    // interior rings must be clockwise (negative signed area). The NIFC API
+    // doesn't guarantee this, so we re-wind any rings that violate it.
+    // Interior rings (unburned islands inside a perimeter) are preserved.
+    normalizeGeometry(geometry) {
+        const signedArea = ring => {
+            let area = 0;
+            for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                area += (ring[j][0] + ring[i][0]) * (ring[j][1] - ring[i][1]);
+            }
+            return area / 2;
+        };
+
+        const fixPolygon = rings =>
+            rings.map((ring, i) => {
+                const shouldBeCCW = i === 0; // exterior ring
+                const isCCW = signedArea(ring) > 0;
+                return shouldBeCCW === isCCW ? ring : [...ring].reverse();
+            });
+
+        if (geometry.type === 'Polygon') {
+            return {
+                type: 'MultiPolygon',
+                coordinates: [fixPolygon(geometry.coordinates)],
+            };
+        }
+        if (geometry.type === 'MultiPolygon') {
+            return {
+                type: 'MultiPolygon',
+                coordinates: geometry.coordinates.map(fixPolygon),
+            };
+        }
+        // Unknown type — pass through unchanged rather than silently dropping it.
+        return geometry;
     }
 
     fixPerimeterName(rawPerimeter) {
@@ -2524,51 +2673,11 @@ export class PerimeterService {
             recent: recentPerimeters.length,
             orphaned: orphanedPerimeters.length,
             orphanedPercentage:
-                Math.round(
-                    (orphanedPerimeters.length / allPerimeters.length) * 100
-                ) || 0,
-        };
-    }
-
-    // Query Mapping
-    mapQuery(apiQuery) {
-        const dbQuery = {};
-
-        // Field mappings
-        const fieldMap = {
-            sourceId: 'properties.sourceId',
-            name: 'properties.name',
-        };
-
-        for (const [apiField, dbField] of Object.entries(fieldMap)) {
-            if (apiQuery[apiField] !== undefined) {
-                dbQuery[dbField] = apiQuery[apiField];
-            }
-        }
-
-        // Time-based filters
-        if (apiQuery.minLastUpdated) {
-            dbQuery['properties.lastUpdated'] = {
-                $gte: new Date(apiQuery.minLastUpdated),
-            };
-        }
-
-        if (apiQuery.maxLastUpdated) {
-            dbQuery['properties.lastUpdated'] = {
-                ...dbQuery['properties.lastUpdated'],
-                $lte: new Date(apiQuery.maxLastUpdated),
-            };
-        }
-
-        return dbQuery;
-    }
-}
-
-export const perimeterService = new PerimeterService();
-
+// ... (truncated — 42 more lines not shown)
 ```
 
 ### ./server/plugins/database.js
+*modified 5 months ago*
 ```javascript
 import { connectDB } from '../utils/db';
 
@@ -2584,6 +2693,7 @@ export default defineNitroPlugin(async () => {
 ```
 
 ### ./server/middleware/adminAuth.js
+*modified today*
 ```javascript
 // server/middleware/adminAuth.js
 
@@ -2664,6 +2774,7 @@ export default defineEventHandler(async event => {
 ```
 
 ### ./server/routes/auth/google.get.js
+*modified today*
 ```javascript
 import User from '../../models/User.js';
 
@@ -2711,10 +2822,105 @@ export default defineOAuthGoogleEventHandler({
 ```
 
 ### ./server/routes/auth/logout.get.js
+*modified today*
 ```javascript
 export default defineEventHandler(async event => {
     await clearUserSession(event);
     return sendRedirect(event, '/');
 });
+
+```
+
+### ./.github/workflows/refresh-fire-data.yml
+*modified today*
+```yaml
+# .github/workflows/refresh-fire-data.yml
+
+name: Refresh Fire Data
+
+on:
+    schedule:
+        - cron: '0 */6 * * *' # Every 6 hours
+    workflow_dispatch: # Alllow manual trigger from GitHub Actions UI
+
+jobs:
+    refresh:
+        name: Renew fire and perimeter data
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        steps:
+            - name: Wake app
+              run: |
+                  echo "Sending wake request to ${{ vars.APP_URL }}"
+                  HTTP_STATUS=$(curl --silent --show-error \
+                                    --max-time 30 \
+                                    --retry 3 \
+                                    --retry-delay 5 \
+                                    --retry-connrefused \
+                                    --write-out "%{http_code}" \
+                                    --output /tmp/wake_response.json \
+                                    "${{ vars.APP_URL }}/")
+                  echo "Status: $HTTP_STATUS"
+                  if [ "$HTTP_STATUS" -ne 200 ]; then
+                    echo "Error: app unreachable, got $HTTP_STATUS"
+                    cat /tmp/wake_response.json
+                    exit 1
+                  fi
+                  echo "App is reachable."
+
+            - name: Renew fire point data
+              run: |
+                  echo "Requesting fire data renewal..."
+                  HTTP_STATUS=$(curl --silent --show-error \
+                                    --max-time 60 \
+                                    --retry 2 \
+                                    --write-out "%{http_code}" \
+                                    --output /tmp/fire_response.json \
+                                    -X POST \
+                                    -H "Content-Type: application/json" \
+                                    -H "X-Admin-Key: ${{ secrets.ADMIN_SECRET }}" \
+                                    -d '{"action":"renew"}' \
+                                    "${{ vars.APP_URL }}/api/fire")
+
+                  RESPONSE=$(cat /tmp/fire_response.json)
+                  echo "Status: $HTTP_STATUS"
+                  echo "Response: $RESPONSE"
+
+                  if [ "$HTTP_STATUS" -ne 200 ]; then
+                    echo "Error: expected 200, got $HTTP_STATUS"
+                    exit 1
+                  fi
+
+                  ADDED=$(echo "$RESPONSE" | grep -o '"added":[0-9]*' | grep -o '[0-9]*')
+                  UPDATED=$(echo "$RESPONSE" | grep -o '"updated":[0-9]*' | grep -o '[0-9]*')
+                  echo "Fires added: ${ADDED:-unknown}, updated: ${UPDATED:-unknown}"
+
+            - name: Renew perimeter data
+              run: |
+                  echo "Requesting perimeter data renewal..."
+                  HTTP_STATUS=$(curl --silent --show-error \
+                                    --max-time 60 \
+                                    --retry 2 \
+                                    --write-out "%{http_code}" \
+                                    --output /tmp/perimeter_response.json \
+                                    -X POST \
+                                    -H "Content-Type: application/json" \
+                                    -H "X-Admin-Key: ${{ secrets.ADMIN_SECRET }}" \
+                                    -d '{"action":"renew"}' \
+                                    "${{ vars.APP_URL }}/api/perimeter")
+
+                  RESPONSE=$(cat /tmp/perimeter_response.json)
+                  echo "Status: $HTTP_STATUS"
+                  echo "Response: $RESPONSE"
+
+                  if [ "$HTTP_STATUS" -ne 200 ]; then
+                    echo "Error: expected 200, got $HTTP_STATUS"
+                    exit 1
+                  fi
+
+                  ADDED=$(echo "$RESPONSE" | grep -o '"added":[0-9]*' | grep -o '[0-9]*')
+                  UPDATED=$(echo "$RESPONSE" | grep -o '"updated":[0-9]*' | grep -o '[0-9]*')
+                  echo "Perimeters added: ${ADDED:-unknown}, updated: ${UPDATED:-unknown}"
 
 ```
