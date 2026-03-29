@@ -15,7 +15,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     adminSecret: process.env.ADMIN_SECRET,
-    firmsMapKey: process.env.FIRMS_MAP_KEY, // NASA FIRMS API key — server-side only
+    NasaKey: process.env.NASA_KEY, 
     oauth: {
       google: {
         clientId: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID,

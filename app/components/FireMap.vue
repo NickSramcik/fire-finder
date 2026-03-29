@@ -1,7 +1,7 @@
 <template>
   <div>
     <div id="map" />
-    
+
     <!-- Map Error -->
     <div v-if="showMapError" class="error-banner">
       Map Error: {{ mapError }}
@@ -9,7 +9,7 @@
         Dismiss
       </button>
     </div>
-    
+
     <!-- Data Error -->
     <div v-if="showDataError" class="error-banner">
       Data Error: {{ dataError.message }}
@@ -17,7 +17,15 @@
         Dismiss
       </button>
     </div>
-    
+
+    <!-- Hotspot Error -->
+    <div v-if="showHotspotError" class="error-banner">
+      Hotspot Error: {{ hotspotError.message }}
+      <button class="ml-4 px-2 py-1 bg-white text-red-600 rounded text-sm" @click="dismissHotspotError">
+        Dismiss
+      </button>
+    </div>
+
     <div v-if="loading" class="loading-overlay">
       Loading fire data...
     </div>
@@ -27,125 +35,147 @@
 <script setup>
 import { onMounted, watch, ref } from 'vue';
 import { useFireData } from '~/composables/useFireData';
+import { useHotspotData } from '~/composables/useHotspotData';
 import { useMap } from '~/composables/useMap';
 
-// Use composables
-const { 
-  fires, 
-  loading, 
-  error: dataError, 
+// Fire data
+const {
+  fires,
+  loading,
+  error: dataError,
   fetchFires,
-  clearError: clearDataError
+  clearError: clearDataError,
 } = useFireData();
 
-const { 
-  mapLoaded, 
+// Hotspot data
+const {
+  hotspots,
+  error: hotspotError,
+  fetchHotspots,
+  clearError: clearHotspotError,
+} = useHotspotData();
+
+// Map
+const {
+  mapLoaded,
   mapError,
-  initializeMap, 
-  loadMapIcons, 
-  addFireLayer, 
+  initializeMap,
+  loadMapIcons,
+  addFireLayer,
   addPerimeterLayer,
-  addPopupInteractivity
+  addHotspotLayer,
+  addHotspotPopupInteractivity,
+  addPopupInteractivity,
 } = useMap();
 
-// Track dismissed errors
-const dismissedMapError = ref(false);
-const dismissedDataError = ref(false);
-
-// Computed properties for showing errors
+// Error dismiss state
 const showMapError = ref(false);
 const showDataError = ref(false);
+const showHotspotError = ref(false);
 
-// Watch for new errors to reset dismiss state
-watch(mapError, (newError) => {
-  if (newError) {
-    dismissedMapError.value = false;
-    showMapError.value = true;
-  }
+watch(mapError, newError => {
+  if (newError) showMapError.value = true;
 });
 
-watch(dataError, (newError) => {
-  if (newError) {
-    dismissedDataError.value = false;
-    showDataError.value = true;
-  }
+watch(dataError, newError => {
+  if (newError) showDataError.value = true;
+});
+
+watch(hotspotError, newError => {
+  if (newError) showHotspotError.value = true;
 });
 
 // Initialize on mount
 onMounted(async () => {
   try {
-    // Initialize map first
     initializeMap('map');
-    
-    // Then fetch data
-    await fetchFires({ hasArea: 'true' });
+
+    // Fetch fire and hotspot data in parallel
+    await Promise.allSettled([
+      fetchFires({ hasArea: 'true' }),
+      fetchHotspots(),
+    ]);
   } catch (err) {
     console.error('Failed to initialize map or fetch data:', err);
   }
 });
 
-// Watch for map readiness and data
+// Render fire + perimeter layers once map and fire data are ready
 watch([mapLoaded, fires], async () => {
-  if (mapLoaded.value && fires.value && !mapError.value) {
-    try {
-      console.log('Setting up map layers...');
-      
-      const iconsLoaded = await loadMapIcons();
-      if (!iconsLoaded) {
-        console.warn('Icons failed to load, but continuing...');
-      }
-      
-      const firePoints = Array.isArray(fires.value) ? fires.value : fires.value.fires;
-      const perimeterData = Array.isArray(fires.value) ? [] : fires.value.perimeters;
-      
-      // Add data layers to map
-      if (firePoints?.length) {
-        addFireLayer(firePoints);
-        addPopupInteractivity();
-      } else {
-        console.log('No fire data to display');
-      }
-      
-      if (perimeterData?.length) {
-        addPerimeterLayer(perimeterData);
-      } else {
-        console.log('No perimeter data to display');
-      }
-      
-      console.log('Map layers setup complete');
-    } catch (err) {
-      console.error('Error setting up map layers:', err);
+  if (!mapLoaded.value || !fires.value || mapError.value) return;
+
+  try {
+    console.log('Setting up fire layers...');
+
+    const iconsLoaded = await loadMapIcons();
+    if (!iconsLoaded) console.warn('Icons failed to load, but continuing...');
+
+    const firePoints = Array.isArray(fires.value) ? fires.value : fires.value.fires;
+    const perimeterData = Array.isArray(fires.value) ? [] : fires.value.perimeters;
+
+    if (firePoints?.length) {
+      addFireLayer(firePoints);
+      addPopupInteractivity();
+    } else {
+      console.log('No fire data to display');
     }
+
+    if (perimeterData?.length) {
+      addPerimeterLayer(perimeterData);
+    } else {
+      console.log('No perimeter data to display');
+    }
+
+    console.log('Fire layers setup complete');
+  } catch (err) {
+    console.error('Error setting up fire layers:', err);
   }
 });
 
-// Auto-retry on data error (but not map error)
-watch(dataError, (newError) => {
+// Render hotspot layer once map and hotspot data are ready
+watch([mapLoaded, hotspots], () => {
+  if (!mapLoaded.value || !hotspots.value || mapError.value) return;
+
+  try {
+    console.log('Setting up hotspot layer...');
+
+    if (hotspots.value?.length) {
+      addHotspotLayer(hotspots.value);
+      addHotspotPopupInteractivity();
+      console.log(`Hotspot layer setup complete (${hotspots.value.length} hotspots)`);
+    } else {
+      console.log('No hotspot data to display');
+    }
+  } catch (err) {
+    console.error('Error setting up hotspot layer:', err);
+  }
+});
+
+// Auto-retry on data errors (but not map errors)
+watch(dataError, newError => {
   if (newError && !mapError.value) {
-    console.log('Data error detected, will retry in 10 seconds...');
-    setTimeout(() => {
-      fetchFires({ hasArea: 'true' });
-    }, 10000);
+    console.log('Fire data error — retrying in 10s...');
+    setTimeout(() => fetchFires({ hasArea: 'true' }), 10000);
   }
 });
 
-// Dismiss errors
-function dismissMapError() {
-  dismissedMapError.value = true;
-  showMapError.value = false;
-}
+watch(hotspotError, newError => {
+  if (newError && !mapError.value) {
+    console.log('Hotspot data error — retrying in 10s...');
+    setTimeout(() => fetchHotspots(), 10000);
+  }
+});
 
-function dismissDataError() {
-  dismissedDataError.value = true;
-  showDataError.value = false;
-  clearDataError();
-}
+// Dismiss handlers
+function dismissMapError() { showMapError.value = false; }
+function dismissDataError() { showDataError.value = false; clearDataError(); }
+function dismissHotspotError() { showHotspotError.value = false; clearHotspotError(); }
 </script>
 
 <style>
 @import 'https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css';
 
-#map { 
+#map {
   position: fixed;
   width: 100%;
   height: 100%;
@@ -176,11 +206,10 @@ function dismissDataError() {
   background-color: var(--color-base-200);
 }
 
-/* FIXED: Error banner positioned below navbar */
 .error-banner {
-  z-index: 90; /* Below navbar but above map */
+  z-index: 90;
   position: fixed;
-  top: 4rem; /* Position below navbar (navbar is ~4rem tall) */
+  top: 4rem;
   left: 0;
   right: 0;
   background-color: #dc2626;

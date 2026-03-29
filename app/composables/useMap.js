@@ -63,7 +63,7 @@ export function useMap() {
             });
 
             map.value.on('error', e => {
-                // FIXED: Ignore layer ordering errors, they're not critical
+                // Ignore layer ordering errors, they're not critical
                 if (e.error?.message?.includes('does not exist on this map')) {
                     console.warn(
                         'Layer ordering issue (non-critical):',
@@ -144,13 +144,11 @@ export function useMap() {
                 map.value.removeSource(sourceId);
             }
 
-            // Add source
             map.value.addSource(sourceId, {
                 type: 'geojson',
                 data: geojson,
             });
 
-            // Add layer
             map.value.addLayer({
                 id: `${sourceId}-points`,
                 type: 'symbol',
@@ -158,11 +156,12 @@ export function useMap() {
                 layout: {
                     'icon-image': [
                         'case',
-                        ['<', ['get', 'area'], 1000],
+                        // coalesce guards against null area — defaults to 0
+                        ['<', ['coalesce', ['get', 'area'], 0], 1000],
                         'fire-small',
-                        ['<', ['get', 'area'], 10000],
+                        ['<', ['coalesce', ['get', 'area'], 0], 10000],
                         'fire-medium',
-                        ['<', ['get', 'area'], 100000],
+                        ['<', ['coalesce', ['get', 'area'], 0], 100000],
                         'fire-large',
                         'fire-huge',
                     ],
@@ -200,7 +199,6 @@ export function useMap() {
                 })),
             };
 
-            // Remove existing source/layer if present
             if (map.value.getSource(sourceId)) {
                 if (map.value.getLayer(`${sourceId}-fill`)) {
                     map.value.removeLayer(`${sourceId}-fill`);
@@ -211,32 +209,28 @@ export function useMap() {
                 map.value.removeSource(sourceId);
             }
 
-            // Add source
             map.value.addSource(sourceId, {
                 type: 'geojson',
                 data: geojson,
             });
 
-            // FIXED: Add perimeter layers without beforeId to avoid ordering issues
-            // Add fill layer first (will be at bottom)
             map.value.addLayer({
                 id: `${sourceId}-fill`,
                 type: 'fill',
                 source: sourceId,
                 paint: {
                     'fill-color': '#ff5722',
-                    'fill-opacity': 0.4, // Increased opacity for better visibility
+                    'fill-opacity': 0.4,
                 },
             });
 
-            // Add outline layer
             map.value.addLayer({
                 id: `${sourceId}-outline`,
                 type: 'line',
                 source: sourceId,
                 paint: {
                     'line-color': '#ff5722',
-                    'line-width': 3, // Increased width for better visibility
+                    'line-width': 3,
                     'line-opacity': 0.8,
                 },
             });
@@ -272,7 +266,6 @@ export function useMap() {
                 })),
             };
 
-            // Remove existing source/layer if present
             if (map.value.getSource(sourceId)) {
                 if (map.value.getLayer(`${sourceId}-points`)) {
                     map.value.removeLayer(`${sourceId}-points`);
@@ -283,97 +276,94 @@ export function useMap() {
                 map.value.removeSource(sourceId);
             }
 
-            // Add source
             map.value.addSource(sourceId, {
                 type: 'geojson',
                 data: geojson,
             });
 
-            // Option 1: Point layer with size based on brightness
-            map.value.addLayer({
-                id: `${sourceId}-points`,
-                type: 'circle',
-                source: sourceId,
-                paint: {
-                    'circle-radius': [
-                        'interpolate',
-                        ['linear'],
-                        ['get', 'brightness'],
-                        300,
-                        3, // Min brightness = small circle
-                        370,
-                        8, // Max brightness = larger circle
-                    ],
-                    'circle-color': [
-                        'interpolate',
-                        ['linear'],
-                        ['get', 'brightness'],
-                        300,
-                        '#ffff00', // Yellow for cooler
-                        320,
-                        '#ff8000', // Orange
-                        340,
-                        '#ff4000', // Red-orange
-                        370,
-                        '#ff0000', // Red for hottest
-                    ],
-                    'circle-opacity': 0.8,
-                    'circle-stroke-width': 1,
-                    'circle-stroke-color': '#ffffff',
-                },
-            });
-
-            // Option 2: Heatmap layer for density visualization
+            // Heatmap — visible when zoomed out, fades out as you zoom in
             map.value.addLayer({
                 id: `${sourceId}-heatmap`,
                 type: 'heatmap',
                 source: sourceId,
+                maxzoom: 10,
                 paint: {
                     'heatmap-weight': [
                         'interpolate',
                         ['linear'],
-                        ['get', 'brightness'],
-                        300,
-                        0,
-                        370,
-                        1,
+                        // coalesce guards against null brightness — defaults to min
+                        ['coalesce', ['get', 'brightness'], 300],
+                        300, 0,
+                        370, 1,
                     ],
                     'heatmap-intensity': [
                         'interpolate',
                         ['linear'],
                         ['zoom'],
-                        0,
-                        1,
-                        9,
-                        3,
+                        0, 1,
+                        9, 3,
                     ],
                     'heatmap-color': [
                         'interpolate',
                         ['linear'],
                         ['heatmap-density'],
-                        0,
-                        'rgba(0, 0, 255, 0)',
-                        0.2,
-                        'rgba(0, 255, 255, 0.5)',
-                        0.4,
-                        'rgba(0, 255, 0, 0.5)',
-                        0.6,
-                        'rgba(255, 255, 0, 0.5)',
-                        0.8,
-                        'rgba(255, 165, 0, 0.5)',
-                        1,
-                        'rgba(255, 0, 0, 0.5)',
+                        0,   'rgba(0, 0, 255, 0)',
+                        0.2, 'rgba(0, 255, 255, 0.5)',
+                        0.4, 'rgba(0, 255, 0, 0.5)',
+                        0.6, 'rgba(255, 255, 0, 0.5)',
+                        0.8, 'rgba(255, 165, 0, 0.5)',
+                        1,   'rgba(255, 0, 0, 0.5)',
                     ],
                     'heatmap-radius': [
                         'interpolate',
                         ['linear'],
                         ['zoom'],
-                        0,
-                        2,
-                        9,
-                        20,
+                        0, 2,
+                        9, 20,
                     ],
-                    'heatmap-opacity': 0.6,
+                    // Fade heatmap out as circles become visible
+                    'heatmap-opacity': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        8, 0.8,
+                        10, 0,
+                    ],
+                },
+            });
+
+            // Individual points — fade in as you zoom in past the heatmap
+            map.value.addLayer({
+                id: `${sourceId}-points`,
+                type: 'circle',
+                source: sourceId,
+                minzoom: 8,
+                paint: {
+                    'circle-radius': [
+                        'interpolate',
+                        ['linear'],
+                        ['coalesce', ['get', 'brightness'], 300],
+                        300, 3,
+                        370, 8,
+                    ],
+                    'circle-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['coalesce', ['get', 'brightness'], 300],
+                        300, '#ffff00',
+                        320, '#ff8000',
+                        340, '#ff4000',
+                        370, '#ff0000',
+                    ],
+                    'circle-opacity': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        8, 0,
+                        10, 0.8,
+                    ],
+                    'circle-stroke-width': 1,
+                    'circle-stroke-color': '#ffffff',
                 },
             });
 
@@ -393,12 +383,10 @@ export function useMap() {
 
         const layerId = `${sourceId}-points`;
 
-        // Remove existing event listeners
         map.value.off('click', layerId);
         map.value.off('mouseenter', layerId);
         map.value.off('mouseleave', layerId);
 
-        // Click for popup
         map.value.on('click', layerId, e => {
             if (!e.features || e.features.length === 0) return;
 
@@ -416,7 +404,6 @@ export function useMap() {
                 .addTo(map.value);
         });
 
-        // Cursor changes
         map.value.on('mouseenter', layerId, () => {
             map.value.getCanvas().style.cursor = 'pointer';
         });
@@ -428,25 +415,19 @@ export function useMap() {
 
     function createHotspotPopupContent(feature) {
         const props = feature.properties;
-        const date = new Date(props.acquisitionDate).toLocaleString();
+        const date = props.acquisitionDate
+            ? new Date(props.acquisitionDate).toLocaleString()
+            : 'Unknown';
 
         return `
       <div class="popup-content">
-        <h3 class="font-bold text-lg">🔥 Infrared Hotspot</h3>
+        <h3 class="font-bold text-lg">🌡️ IR Hotspot</h3>
         <div class="mt-2 space-y-1 text-sm">
-          <p><span class="font-semibold">Brightness:</span> ${
-              props.brightness
-          }K</p>
-          <p><span class="font-semibold">Confidence:</span> ${
-              props.confidence
-          }%</p>
-          <p><span class="font-semibold">Satellite:</span> ${
-              props.satellite
-          }</p>
+          <p><span class="font-semibold">Brightness:</span> ${props.brightness != null ? props.brightness + 'K' : 'N/A'}</p>
+          <p><span class="font-semibold">Confidence:</span> ${props.confidence != null ? props.confidence + '%' : 'N/A'}</p>
+          <p><span class="font-semibold">Satellite:</span> ${props.satellite ?? 'N/A'}</p>
           <p><span class="font-semibold">Detected:</span> ${date}</p>
-          <p><span class="font-semibold">Fire Power:</span> ${
-              props.frp || 'N/A'
-          } MW</p>
+          <p><span class="font-semibold">Fire Power:</span> ${props.frp != null ? props.frp + ' MW' : 'N/A'}</p>
         </div>
       </div>
     `;
@@ -468,7 +449,7 @@ export function useMap() {
         });
     }
 
-    // Add popup interactivity
+    // Add popup interactivity for fires
     function addPopupInteractivity(sourceId = 'fires') {
         if (!map.value) {
             console.log('Map not ready for adding interactivity');
@@ -477,16 +458,13 @@ export function useMap() {
 
         const layerId = `${sourceId}-points`;
 
-        // Remove existing event listeners to prevent duplicates
         map.value.off('click', layerId);
         map.value.off('mouseenter', layerId);
         map.value.off('mouseleave', layerId);
 
-        // Click for popup
         map.value.on('click', layerId, e => {
             if (!e.features || e.features.length === 0) return;
 
-            // Remove any existing popups
             document
                 .querySelectorAll('.mapboxgl-popup')
                 .forEach(popup => popup.remove());
@@ -501,7 +479,6 @@ export function useMap() {
                 .addTo(map.value);
         });
 
-        // Cursor changes
         map.value.on('mouseenter', layerId, () => {
             if (map.value) {
                 map.value.getCanvas().style.cursor = 'pointer';
@@ -520,15 +497,9 @@ export function useMap() {
         return `
       <div class="popup-content">
         <h3 class="font-bold text-lg">${props.name || 'Unknown Fire'}</h3>
-        <p class="mt-2"><span class="font-semibold">Status:</span> ${
-            props.status || 'Unknown'
-        }</p>
-        <p><span class="font-semibold">Containment:</span> ${
-            props.containment ? props.containment + '%' : 'Unknown'
-        }</p>
-        <p><span class="font-semibold">Area:</span> ${
-            props.area?.toLocaleString() || 'N/A'
-        } acres</p>
+        <p class="mt-2"><span class="font-semibold">Status:</span> ${props.status || 'Unknown'}</p>
+        <p><span class="font-semibold">Containment:</span> ${props.containment != null ? props.containment + '%' : 'Unknown'}</p>
+        <p><span class="font-semibold">Area:</span> ${props.area != null ? props.area.toLocaleString() + ' acres' : 'N/A'}</p>
         <p><span class="font-semibold">Last Updated:</span> ${
             props.lastUpdated
                 ? new Date(props.lastUpdated).toLocaleDateString()
@@ -552,7 +523,6 @@ export function useMap() {
         }
     }
 
-    // Auto-cleanup on unmount
     onUnmounted(() => {
         destroyMap();
     });

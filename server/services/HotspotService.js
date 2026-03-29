@@ -1,10 +1,10 @@
 import { parse } from 'csv-parse/sync';
 import Hotspot from '../models/Hotspot.js';
 
-// US bounding box for FIRMS area queries
+// US bounding box for NASA area queries
 const US_BBOX = '-125,24,-65,50';
 
-// FIRMS CSV column headers vary slightly by source — normalize them here
+// NASA CSV column headers vary slightly by source — normalize them here
 const COLUMN_MAP = {
     latitude: 'latitude',
     longitude: 'longitude',
@@ -23,14 +23,14 @@ const COLUMN_MAP = {
 
 export class HotspotService {
     constructor() {
-        this.baseUrl = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv';
+        this.baseUrl = 'https://FIRMS.modaps.eosdis.nasa.gov/api/area/csv';
     }
 
     // Read lazily so Nuxt runtime config is fully initialized before first use
-    get firmsKey() {
-        const key = process.env.FIRMS_MAP_KEY;
+    get NASAKey() {
+        const key = process.env.NASA_KEY;
         if (!key)
-            throw new Error('FIRMS_MAP_KEY environment variable is not set');
+            throw new Error('NASA_KEY environment variable is not set');
         return key;
     }
 
@@ -51,7 +51,7 @@ export class HotspotService {
                 hotspots.push(...result.value);
             } else {
                 console.warn(
-                    'FIRMS source fetch failed:',
+                    'NASA source fetch failed:',
                     result.reason?.message
                 );
             }
@@ -61,22 +61,22 @@ export class HotspotService {
     }
 
     async _fetchSource(source, area, days) {
-        const url = `${this.baseUrl}/${this.firmsKey}/${source}/${area}/${days}`;
+        const url = `${this.baseUrl}/${this.NASAKey}/${source}/${area}/${days}`;
 
         const response = await fetch(url, {
             signal: AbortSignal.timeout(30000), // 30s timeout
         });
 
         if (!response.ok) {
-            throw new Error(`FIRMS ${source} returned ${response.status}`);
+            throw new Error(`NASA ${source} returned ${response.status}`);
         }
 
         const csvText = await response.text();
 
-        // FIRMS returns a plain "Invalid key" or similar string on auth failure
+        // NASA returns a plain "Invalid key" or similar string on auth failure
         if (!csvText.startsWith('latitude') && !csvText.startsWith('lon')) {
             throw new Error(
-                `Unexpected FIRMS response for ${source}: ${csvText.slice(
+                `Unexpected NASA response for ${source}: ${csvText.slice(
                     0,
                     100
                 )}`
@@ -100,8 +100,8 @@ export class HotspotService {
                 const hotspot = this._rowToHotspot(row);
                 if (hotspot) hotspots.push(hotspot);
             } catch (err) {
-                // Skip malformed rows silently — FIRMS data can have gaps
-                console.warn('Skipping malformed FIRMS row:', err.message);
+                // Skip malformed rows silently — NASA data can have gaps
+                console.warn('Skipping malformed NASA row:', err.message);
             }
         }
 
@@ -145,7 +145,7 @@ export class HotspotService {
                 track: parseFloat(row.track) || null, // pixel height in km
                 frp: parseFloat(row.frp) || null, // Fire Radiative Power (MW)
                 daynight: row.daynight ?? null,
-                source: 'NASA_FIRMS',
+                source: 'NASA_NASA',
             },
         };
     }
@@ -178,13 +178,13 @@ export class HotspotService {
     async renewHotspots(area = null, days = 1) {
         const targetArea = area || US_BBOX;
         console.log(
-            `Fetching hotspots from NASA FIRMS (area: ${targetArea}, days: ${days})...`
+            `Fetching hotspots from NASA NASA (area: ${targetArea}, days: ${days})...`
         );
 
         const hotspots = await this.fetchHotspots(targetArea, days);
 
         if (!hotspots.length) {
-            console.warn('FIRMS returned 0 hotspots — skipping renewal');
+            console.warn('NASA returned 0 hotspots — skipping renewal');
             return { added: 0, updated: 0, total: 0 };
         }
 
