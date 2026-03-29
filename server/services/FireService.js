@@ -1,4 +1,5 @@
 import FirePoint from '../models/FirePoint.js';
+import { logActivity } from '../utils/logger.js';
 
 export class FireService {
     constructor() {
@@ -52,8 +53,20 @@ export class FireService {
     }
 
     // External Data Integration
-    async renewFires() {
-        const fireData = await this.fetchFirePoints();
+    async renewFires(trigger = 'auto') {
+        let fireData;
+        try {
+            fireData = await this.fetchFirePoints();
+        } catch (err) {
+            await logActivity({
+                type: 'error',
+                source: 'fire',
+                trigger,
+                message: `Fire fetch failed: ${err.message}`,
+                details: { error: err.message },
+            });
+            throw err;
+        }
 
         const operations = fireData.map(rawFire => {
             const processedFire = this.processFire(rawFire);
@@ -93,12 +106,28 @@ export class FireService {
                 added = error.result?.upsertedCount ?? 0;
                 updated = error.result?.modifiedCount ?? 0;
             } else {
+                await logActivity({
+                    type: 'error',
+                    source: 'fire',
+                    trigger,
+                    message: `Fire DB write failed: ${error.message}`,
+                    details: { error: error.message, total: fireData.length },
+                });
                 console.error('Error during bulkWrite for fires:', error);
             }
         }
 
         await this.cleanupOldFires();
         await this.removeDuplicateFires();
+
+        await logActivity({
+            type: 'success',
+            source: 'fire',
+            trigger,
+            message: `Fire renewal complete — ${added} added, ${updated} updated`,
+            details: { added, updated, total: fireData.length },
+        });
+
         return { added, updated };
     }
 
@@ -279,7 +308,6 @@ export class FireService {
     mapQuery(apiQuery) {
         const dbQuery = {};
 
-        // Field mappings
         const fieldMap = {
             sourceId: 'properties.sourceId',
             status: 'properties.status',
@@ -294,7 +322,6 @@ export class FireService {
             }
         }
 
-        // Time-based filters
         if (apiQuery.minLastUpdated) {
             dbQuery['properties.lastUpdated'] = {
                 $gte: new Date(apiQuery.minLastUpdated),
@@ -308,7 +335,6 @@ export class FireService {
             };
         }
 
-        // Existence filters
         if (apiQuery.hasArea === 'true') {
             dbQuery['properties.area'] = { $exists: true, $ne: null, $gt: 0 };
         }
@@ -317,7 +343,6 @@ export class FireService {
             dbQuery['properties.containment'] = { $exists: true, $ne: null };
         }
 
-        // Comparison filters
         if (apiQuery.minArea) {
             dbQuery['properties.area'] = {
                 ...dbQuery['properties.area'],

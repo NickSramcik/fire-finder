@@ -5,11 +5,11 @@ name: Refresh Fire Data
 on:
     schedule:
         - cron: '0 */6 * * *' # Every 6 hours
-    workflow_dispatch: # Alllow manual trigger from GitHub Actions UI
+    workflow_dispatch: # Allow manual trigger from GitHub Actions UI
 
 jobs:
     refresh:
-        name: Renew fire and perimeter data
+        name: Renew fire, perimeter, and hotspot data
         runs-on: ubuntu-latest
         timeout-minutes: 10
 
@@ -86,3 +86,30 @@ jobs:
                   ADDED=$(echo "$RESPONSE" | grep -o '"added":[0-9]*' | grep -o '[0-9]*')
                   UPDATED=$(echo "$RESPONSE" | grep -o '"updated":[0-9]*' | grep -o '[0-9]*')
                   echo "Perimeters added: ${ADDED:-unknown}, updated: ${UPDATED:-unknown}"
+
+            - name: Renew hotspot data
+              run: |
+                  echo "Requesting hotspot data renewal..."
+                  HTTP_STATUS=$(curl --silent --show-error \
+                                    --max-time 90 \
+                                    --retry 2 \
+                                    --write-out "%{http_code}" \
+                                    --output /tmp/hotspot_response.json \
+                                    -X POST \
+                                    -H "Content-Type: application/json" \
+                                    -H "X-Admin-Key: ${{ secrets.ADMIN_SECRET }}" \
+                                    -d '{"action":"renew"}' \
+                                    "${{ vars.APP_URL }}/api/hotspots")
+
+                  RESPONSE=$(cat /tmp/hotspot_response.json)
+                  echo "Status: $HTTP_STATUS"
+                  echo "Response: $RESPONSE"
+
+                  if [ "$HTTP_STATUS" -ne 200 ]; then
+                    echo "Error: expected 200, got $HTTP_STATUS"
+                    exit 1
+                  fi
+
+                  ADDED=$(echo "$RESPONSE" | grep -o '"added":[0-9]*' | grep -o '[0-9]*')
+                  UPDATED=$(echo "$RESPONSE" | grep -o '"updated":[0-9]*' | grep -o '[0-9]*')
+                  echo "Hotspots added: ${ADDED:-unknown}, updated: ${UPDATED:-unknown}"

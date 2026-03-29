@@ -1,12 +1,13 @@
 import { parse } from 'csv-parse/sync';
 import Hotspot from '../models/Hotspot.js';
+import { logActivity } from '../utils/logger.js';
 
 // US bounding box for area queries
 const US_BBOX = '-125,24,-65,50';
 
 export class HotspotService {
     constructor() {
-        this.baseUrl = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv';
+        this.baseUrl = 'https://firms.modaps.eosdis.nasa.gov/usfs/api/area/csv';
     }
 
     // Read lazily so Nuxt runtime config is fully initialized before first use
@@ -33,10 +34,7 @@ export class HotspotService {
             if (result.status === 'fulfilled') {
                 hotspots.push(...result.value);
             } else {
-                console.warn(
-                    'NASA source fetch failed:',
-                    result.reason?.message
-                );
+                console.warn('NASA source fetch failed:', result.reason?.message);
             }
         }
 
@@ -74,7 +72,6 @@ export class HotspotService {
         });
 
         const hotspots = [];
-
         for (const row of rows) {
             try {
                 const hotspot = this._rowToHotspot(row);
@@ -98,17 +95,13 @@ export class HotspotService {
         const brightness = parseFloat(row.bright_ti4 ?? row.brightness);
 
         // Deterministic sourceId from position + acquisition time
-        // ensures upserts work correctly across overlapping renewals
         const sourceId = `${row.acq_date}_${row.acq_time}_${lat}_${lng}`;
 
         // VIIRS returns 'l'/'n'/'h', MODIS returns 0-100
         const confidence = this._parseConfidence(row.confidence);
 
         // acq_date: "2024-01-15", acq_time: "0142"
-        const acquisitionDate = this._parseAcquisitionDate(
-            row.acq_date,
-            row.acq_time
-        );
+        const acquisitionDate = this._parseAcquisitionDate(row.acq_date, row.acq_time);
 
         return {
             geometry: {
@@ -138,7 +131,6 @@ export class HotspotService {
         if (categorical[raw.toLowerCase()])
             return categorical[raw.toLowerCase()];
 
-        // MODIS numeric 0-100
         const numeric = parseInt(raw);
         return isNaN(numeric) ? null : numeric;
     }
@@ -146,7 +138,6 @@ export class HotspotService {
     _parseAcquisitionDate(dateStr, timeStr) {
         if (!dateStr) return null;
 
-        // Pad time to 4 digits ("142" → "0142")
         const time = String(timeStr ?? '0000').padStart(4, '0');
         const hours = time.slice(0, 2);
         const minutes = time.slice(2, 4);
@@ -155,22 +146,39 @@ export class HotspotService {
         return isNaN(date.getTime()) ? null : date;
     }
 
-    async renewHotspots(area = null, days = 1) {
+    async renewHotspots(area = null, days = 1, trigger = 'auto') {
         const targetArea = area || US_BBOX;
-        console.log(
-            `Fetching hotspots from NASA (area: ${targetArea}, days: ${days})...`
-        );
+        console.log(`Fetching hotspots from NASA (area: ${targetArea}, days: ${days})...`);
 
-        const hotspots = await this.fetchHotspots(targetArea, days);
+        let hotspots;
+        try {
+            hotspots = await this.fetchHotspots(targetArea, days);
+        } catch (err) {
+            await logActivity({
+                type: 'error',
+                source: 'hotspot',
+                trigger,
+                message: `Hotspot fetch failed: ${err.message}`,
+                details: { error: err.message },
+            });
+            throw err;
+        }
 
         if (!hotspots.length) {
-            console.warn('NASA returned 0 hotspots — skipping renewal');
+            const message = 'NASA returned 0 hotspots — skipping renewal';
+            console.warn(message);
+            await logActivity({
+                type: 'error',
+                source: 'hotspot',
+                trigger,
+                message,
+                details: { area: targetArea, days },
+            });
             return { added: 0, updated: 0, total: 0 };
         }
 
         console.log(`Processing ${hotspots.length} hotspots...`);
 
-        // Upsert by sourceId — avoids duplicates across overlapping renewals
         const ops = hotspots.map(h => ({
             updateOne: {
                 filter: { 'properties.sourceId': h.properties.sourceId },
@@ -179,25 +187,63 @@ export class HotspotService {
             },
         }));
 
-        const result = await Hotspot.bulkWrite(ops, { ordered: false });
+        let result;
+        try {
+            result = await Hotspot.bulkWrite(ops, { ordered: false });
+        } catch (err) {
+            await logActivity({
+                type: 'error',
+                source: 'hotspot',
+                trigger,
+                message: `Hotspot DB write failed: ${err.message}`,
+                details: { error: err.message, total: hotspots.length },
+            });
+            throw err;
+        }
 
         const added = result.upsertedCount ?? 0;
         const updated = result.modifiedCount ?? 0;
 
         console.log(`Hotspots renewed — added: ${added}, updated: ${updated}`);
+
+        await logActivity({
+            type: 'success',
+            source: 'hotspot',
+            trigger,
+            message: `Hotspot renewal complete — ${added} added, ${updated} updated`,
+            details: { added, updated, total: hotspots.length, days },
+        });
+
         return { added, updated, total: hotspots.length };
     }
 
+    async resetHotspots(days = 7) {
+        console.log(`Resetting hotspot data — deleting all and re-fetching ${days} days...`);
+
+        const deleteResult = await Hotspot.deleteMany({});
+        const deleted = deleteResult.deletedCount ?? 0;
+        console.log(`Deleted ${deleted} existing hotspots`);
+
+        // renewHotspots will log its own success/error — log the reset wrapper here
+        const renewResult = await this.renewHotspots(null, days, 'manual');
+
+        await logActivity({
+            type: 'reset',
+            source: 'hotspot',
+            trigger: 'manual',
+            message: `IR data reset — deleted ${deleted}, re-fetched ${days} days from NASA`,
+            details: { deleted, days, ...renewResult },
+        });
+
+        return { deleted, ...renewResult };
+    }
+
     async cleanupOldHotspots(daysThreshold = 7) {
-        const cutoff = new Date(
-            Date.now() - daysThreshold * 24 * 60 * 60 * 1000
-        );
+        const cutoff = new Date(Date.now() - daysThreshold * 24 * 60 * 60 * 1000);
         const result = await Hotspot.deleteMany({
             'properties.acquisitionDate': { $lt: cutoff },
         });
-        console.log(
-            `Cleaned up ${result.deletedCount} hotspots older than ${daysThreshold} days`
-        );
+        console.log(`Cleaned up ${result.deletedCount} hotspots older than ${daysThreshold} days`);
         return result;
     }
 
@@ -247,32 +293,23 @@ export class HotspotService {
     }
 
     // -------------------------------------------------------------------------
-    // Query mapping — translates API query params to Mongoose filter
+    // Query mapping
     // -------------------------------------------------------------------------
 
     mapQuery(apiQuery = {}) {
         const filter = {};
 
         if (apiQuery.minConfidence) {
-            filter['properties.confidence'] = {
-                $gte: parseInt(apiQuery.minConfidence),
-            };
+            filter['properties.confidence'] = { $gte: parseInt(apiQuery.minConfidence) };
         }
-
         if (apiQuery.minBrightness) {
-            filter['properties.brightness'] = {
-                $gte: parseFloat(apiQuery.minBrightness),
-            };
+            filter['properties.brightness'] = { $gte: parseFloat(apiQuery.minBrightness) };
         }
-
         if (apiQuery.satellite) {
             filter['properties.satellite'] = apiQuery.satellite;
         }
-
         if (apiQuery.hours) {
-            const cutoff = new Date(
-                Date.now() - parseInt(apiQuery.hours) * 60 * 60 * 1000
-            );
+            const cutoff = new Date(Date.now() - parseInt(apiQuery.hours) * 60 * 60 * 1000);
             filter['properties.acquisitionDate'] = { $gte: cutoff };
         }
 

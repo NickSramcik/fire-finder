@@ -14,7 +14,7 @@ export default defineEventHandler(async event => {
             const body = await readBody(event);
 
             if (body.action === 'renew') {
-                const result = await fireService.renewFires();
+                const result = await fireService.renewFires('manual');
                 return { statusCode: 200, data: result };
             }
 
@@ -42,24 +42,14 @@ export default defineEventHandler(async event => {
                 });
             }
             const result = await fireService.delete(queryParams);
-            return {
-                statusCode: 200,
-                data: { deletedCount: result.deletedCount },
-            };
+            return { statusCode: 200, data: { deletedCount: result.deletedCount } };
         }
 
-        throw createError({
-            statusCode: 405,
-            statusMessage: 'Method Not Allowed',
-        });
-    } catch (error) {
-        // Re-throw H3 errors (createError) so Nitro handles them correctly
-        if (error.statusCode) throw error;
+        throw createError({ statusCode: 405, statusMessage: 'Method Not Allowed' });
 
+    } catch (error) {
+        if (error.statusCode) throw error;
         console.error('Error in fires API:', error);
-        throw createError({
-            statusCode: 500,
-            statusMessage: 'Internal Server Error',
-        });
+        throw createError({ statusCode: 500, statusMessage: 'Internal Server Error' });
     }
 });

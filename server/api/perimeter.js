@@ -14,7 +14,7 @@ export default defineEventHandler(async event => {
             const body = await readBody(event);
 
             if (body.action === 'renew') {
-                const result = await perimeterService.renewPerimeters();
+                const result = await perimeterService.renewPerimeters('manual');
                 return { statusCode: 200, data: result };
             }
 
@@ -24,18 +24,13 @@ export default defineEventHandler(async event => {
 
         if (event.method === 'PUT') {
             const body = await readBody(event);
-
             if (!body.sourceId) {
                 throw createError({
                     statusCode: 400,
                     statusMessage: 'sourceId is required',
                 });
             }
-
-            const updatedPerimeter = await perimeterService.update(
-                body.sourceId,
-                body
-            );
+            const updatedPerimeter = await perimeterService.update(body.sourceId, body);
             return { statusCode: 200, data: updatedPerimeter };
         }
 
@@ -43,26 +38,17 @@ export default defineEventHandler(async event => {
             if (Object.keys(queryParams).length === 0) {
                 throw createError({
                     statusCode: 400,
-                    statusMessage:
-                        'At least one filter parameter is required for deletion',
+                    statusMessage: 'At least one filter parameter is required for deletion',
                 });
             }
-
             const result = await perimeterService.delete(queryParams);
-            return {
-                statusCode: 200,
-                data: { deletedCount: result.deletedCount },
-            };
+            return { statusCode: 200, data: { deletedCount: result.deletedCount } };
         }
 
-        throw createError({
-            statusCode: 405,
-            statusMessage: 'Method Not Allowed',
-        });
-    } catch (error) {
-        // Re-throw H3 errors (createError) so Nitro handles them correctly
-        if (error.statusCode) throw error;
+        throw createError({ statusCode: 405, statusMessage: 'Method Not Allowed' });
 
+    } catch (error) {
+        if (error.statusCode) throw error;
         console.error('Error in perimeters API:', error);
         throw createError({
             statusCode: 500,

@@ -1,4 +1,5 @@
 import Perimeter from '../models/Perimeter.js';
+import { logActivity } from '../utils/logger.js';
 
 export class PerimeterService {
     constructor() {
@@ -52,8 +53,21 @@ export class PerimeterService {
     }
 
     // External Data Integration
-    async renewPerimeters() {
-        const perimeterData = await this.fetchPerimeters();
+    async renewPerimeters(trigger = 'auto') {
+        let perimeterData;
+        try {
+            perimeterData = await this.fetchPerimeters();
+        } catch (err) {
+            await logActivity({
+                type: 'error',
+                source: 'perimeter',
+                trigger,
+                message: `Perimeter fetch failed: ${err.message}`,
+                details: { error: err.message },
+            });
+            throw err;
+        }
+
         console.log(
             `List of perimeters: ${perimeterData
                 .map(p => p.properties.poly_IncidentName)
@@ -104,20 +118,33 @@ export class PerimeterService {
                     )
                 );
             } else {
+                await logActivity({
+                    type: 'error',
+                    source: 'perimeter',
+                    trigger,
+                    message: `Perimeter DB write failed: ${error.message}`,
+                    details: { error: error.message, total: perimeterData.length },
+                });
                 console.error('Error during bulkWrite for perimeters:', error);
             }
         }
 
-        console.log(
-            `Added ${added} perimeters and Updated ${updated} perimeters`
-        );
-        if (failed.length)
-            console.log(
-                `Failed to process ${failed.length} perimeters: ${failed}`
-            );
+        console.log(`Added ${added} perimeters and Updated ${updated} perimeters`);
+        if (failed.length) {
+            console.log(`Failed to process ${failed.length} perimeters: ${failed}`);
+        }
 
         await this.cleanupOldPerimeters();
         await this.removeDuplicatePerimeters();
+
+        await logActivity({
+            type: 'success',
+            source: 'perimeter',
+            trigger,
+            message: `Perimeter renewal complete — ${added} added, ${updated} updated${failed.length ? `, ${failed.length} failed` : ''}`,
+            details: { added, updated, total: perimeterData.length, failed: failed.length },
+        });
+
         return { added, updated };
     }
 
@@ -185,7 +212,6 @@ export class PerimeterService {
                 coordinates: geometry.coordinates.map(fixPolygon),
             };
         }
-        // Unknown type — pass through unchanged rather than silently dropping it.
         return geometry;
     }
 
@@ -288,7 +314,7 @@ export class PerimeterService {
             this.findRecentPerimeters(7),
         ]);
 
-        const fireSourceIds = []; // Would come from FireService in real implementation
+        const fireSourceIds = [];
         const orphanedPerimeters = await this.findOrphanedPerimeters(
             fireSourceIds
         );
@@ -308,7 +334,6 @@ export class PerimeterService {
     mapQuery(apiQuery) {
         const dbQuery = {};
 
-        // Field mappings
         const fieldMap = {
             sourceId: 'properties.sourceId',
             name: 'properties.name',
@@ -320,7 +345,6 @@ export class PerimeterService {
             }
         }
 
-        // Time-based filters
         if (apiQuery.minLastUpdated) {
             dbQuery['properties.lastUpdated'] = {
                 $gte: new Date(apiQuery.minLastUpdated),
