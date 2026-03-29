@@ -15,15 +15,12 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     adminSecret: process.env.ADMIN_SECRET,
+    firmsMapKey: process.env.FIRMS_MAP_KEY, // NASA FIRMS API key — server-side only
     oauth: {
       google: {
         clientId: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID,
         clientSecret: process.env.NUXT_OAUTH_GOOGLE_CLIENT_SECRET,
       },
-      // apple: {
-      //   clientId: process.env.NUXT_OAUTH_APPLE_CLIENT_ID,
-      //   clientSecret: process.env.NUXT_OAUTH_APPLE_CLIENT_SECRET,
-      // },
     },
     public: {
       mapboxToken: process.env.PUBLIC_MAPBOX_TOKEN,

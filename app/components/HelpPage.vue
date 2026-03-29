@@ -41,9 +41,7 @@
                         <div class="card-body py-4 px-5">
                             <h3 class="font-semibold">Fire Points & Perimeters</h3>
                             <p class="text-sm text-base-content/70">
-                                Active fire locations and mapped perimeters sourced from
-                                <!-- TODO: replace with actual source name, e.g. "NIFC / USFS ArcGIS" -->
-                                <strong>[fire data source]</strong>.
+                                Sourced from the <strong>National Interagency Fire Center (NIFC)</strong>.
                                 Includes fire name, status, containment percentage, and acreage.
                             </p>
                         </div>

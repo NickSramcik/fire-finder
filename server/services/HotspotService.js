@@ -1,378 +1,302 @@
-import Hotspot from '../models/Hotspot.js';
 import { parse } from 'csv-parse/sync';
+import Hotspot from '../models/Hotspot.js';
+
+// US bounding box for FIRMS area queries
+const US_BBOX = '-125,24,-65,50';
+
+// FIRMS CSV column headers vary slightly by source — normalize them here
+const COLUMN_MAP = {
+    latitude: 'latitude',
+    longitude: 'longitude',
+    brightness: 'brightness', // MODIS: brightness (Kelvin), VIIRS: bright_ti4
+    bright_ti4: 'brightness', // VIIRS brightness alias
+    scan: 'scan',
+    track: 'track',
+    acq_date: 'acq_date',
+    acq_time: 'acq_time',
+    satellite: 'satellite',
+    instrument: 'instrument',
+    confidence: 'confidence',
+    frp: 'frp',
+    daynight: 'daynight',
+};
 
 export class HotspotService {
     constructor() {
-        this.model = Hotspot;
-        // this.NASA_BASE_URL = 'https://firms.modaps.eosdis.nasa.gov/usfs/api';
-        this.NASA_BASE_URL =
-            'https://firms.modaps.eosdis.nasa.gov/usfs/api/area/csv';
+        this.baseUrl = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv';
     }
 
-    async fetchHotspots(area = null, days = 1) {
-        try {
-            // Default to continental US if no area specified
-            const bbox = area || '-180, -90, 180, 90';
-            const apiKey = 'a2376008b0235d19ec268bbbafb31204';
-            const source = 'VIIRS_SNPP_NRT';
+    // Read lazily so Nuxt runtime config is fully initialized before first use
+    get firmsKey() {
+        const key = process.env.FIRMS_MAP_KEY;
+        if (!key)
+            throw new Error('FIRMS_MAP_KEY environment variable is not set');
+        return key;
+    }
 
-            if (!apiKey) {
-                throw new Error(
-                    'NASA_FIRMS_API_KEY environment variable is required'
+    // -------------------------------------------------------------------------
+    // Fetch & Renewal
+    // -------------------------------------------------------------------------
+
+    async fetchHotspots(area = US_BBOX, days = 1) {
+        // Fetch from both VIIRS (375m) and MODIS (1km) for coverage
+        const sources = ['VIIRS_SNPP_NRT', 'MODIS_NRT'];
+        const results = await Promise.allSettled(
+            sources.map(source => this._fetchSource(source, area, days))
+        );
+
+        const hotspots = [];
+        for (const result of results) {
+            if (result.status === 'fulfilled') {
+                hotspots.push(...result.value);
+            } else {
+                console.warn(
+                    'FIRMS source fetch failed:',
+                    result.reason?.message
                 );
             }
-
-            const url = `${this.NASA_BASE_URL}/${apiKey}/${source}/${bbox}/${days}`;
-            // https://firms.modaps.eosdis.nasa.gov/usfs/api/area/csv/a2376008b0235d19ec268bbbafb31204/VIIRS_SNPP_NRT/-125,30,-115,50/1/2025-11-17
-            // https://firms.modaps.eosdis.nasa.gov/usfs/api/area/csv/a2376008b0235d19ec268bbbafb31204/-125,30,-115,50/2
-            console.log(`Fetching NASA FIRMS data from: ${url}`);
-
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(
-                    `NASA API responded with status: ${response.status}`
-                );
-            }
-
-            const csvText = await response.text();
-
-            // Parse CSV data
-            const hotspots = this.parseCSVData(csvText);
-            console.log(
-                `Parsed ${hotspots.length} hotspots from NASA FIRMS CSV`
-            );
-
-            return hotspots;
-        } catch (error) {
-            console.error('Error fetching NASA FIRMS data:', error);
-            throw error;
         }
+
+        return hotspots;
+    }
+
+    async _fetchSource(source, area, days) {
+        const url = `${this.baseUrl}/${this.firmsKey}/${source}/${area}/${days}`;
+
+        const response = await fetch(url, {
+            signal: AbortSignal.timeout(30000), // 30s timeout
+        });
+
+        if (!response.ok) {
+            throw new Error(`FIRMS ${source} returned ${response.status}`);
+        }
+
+        const csvText = await response.text();
+
+        // FIRMS returns a plain "Invalid key" or similar string on auth failure
+        if (!csvText.startsWith('latitude') && !csvText.startsWith('lon')) {
+            throw new Error(
+                `Unexpected FIRMS response for ${source}: ${csvText.slice(
+                    0,
+                    100
+                )}`
+            );
+        }
+
+        return this.parseCSVData(csvText);
     }
 
     parseCSVData(csvText) {
-        try {
-            // Skip empty responses
-            if (!csvText || csvText.trim().length === 0) {
-                console.warn('Empty response from NASA FIRMS API');
-                return [];
+        const rows = parse(csvText, {
+            columns: true, // use first row as headers
+            skip_empty_lines: true,
+            trim: true,
+        });
+
+        const hotspots = [];
+
+        for (const row of rows) {
+            try {
+                const hotspot = this._rowToHotspot(row);
+                if (hotspot) hotspots.push(hotspot);
+            } catch (err) {
+                // Skip malformed rows silently — FIRMS data can have gaps
+                console.warn('Skipping malformed FIRMS row:', err.message);
             }
-
-            // Parse CSV - NASA FIRMS CSV format has headers
-            const records = parse(csvText, {
-                columns: true,
-                skip_empty_lines: true,
-                trim: true,
-            });
-
-            return records
-                .map(record => {
-                    // NASA FIRMS CSV columns typically include:
-                    // latitude, longitude, brightness, scan, track, acq_date, acq_time, satellite, confidence, version, bright_t31, frp, daynight
-                    const latitude = parseFloat(record.latitude);
-                    const longitude = parseFloat(record.longitude);
-
-                    if (isNaN(latitude) || isNaN(longitude)) {
-                        console.warn(
-                            'Invalid coordinates in CSV record:',
-                            record
-                        );
-                        return null;
-                    }
-
-                    // Create a unique sourceId
-                    const sourceId = `${record.latitude}_${record.longitude}_${record.acq_date}_${record.acq_time}`;
-
-                    // Parse date - NASA format: YYYY-MM-DD and HHMM (24h time)
-                    const dateStr = record.acq_date;
-                    const timeStr = record.acq_time.toString().padStart(4, '0');
-                    const acquisitionDate = new Date(
-                        `${dateStr}T${timeStr.slice(0, 2)}:${timeStr.slice(
-                            2,
-                            4
-                        )}:00Z`
-                    );
-
-                    return {
-                        geometry: {
-                            type: 'Point',
-                            coordinates: [longitude, latitude], // GeoJSON: [lng, lat]
-                        },
-                        properties: {
-                            sourceId: sourceId,
-                            brightness: parseFloat(record.brightness) || 0,
-                            confidence: parseInt(record.confidence) || 0,
-                            satellite: record.satellite || 'VIIRS_SNPP',
-                            acquisitionDate: acquisitionDate,
-                            scan: parseFloat(record.scan) || 0,
-                            track: parseFloat(record.track) || 0,
-                            frp: parseFloat(record.frp) || 0,
-                            daynight: record.daynight || 'D',
-                            source: 'NASA_FIRMS',
-                        },
-                    };
-                })
-                .filter(Boolean); // Remove any null entries
-        } catch (error) {
-            console.error('Error parsing CSV data:', error);
-            console.error('CSV sample:', csvText.substring(0, 500)); // Log first 500 chars for debugging
-            throw new Error(
-                `Failed to parse NASA FIRMS CSV data: ${error.message}`
-            );
         }
+
+        return hotspots;
     }
 
-    // Alternative: Use the KML endpoint if CSV continues to be problematic
-    async fetchHotspotsKML(area = null, days = 1) {
-        try {
-            const bbox = area || '-125,30,-115,50';
-            const apiKey = process.env.NASA_FIRMS_API_KEY;
+    _rowToHotspot(row) {
+        const lat = parseFloat(row.latitude);
+        const lng = parseFloat(row.longitude);
 
-            const url = `${this.NASA_BASE_URL}/kml_fire_footprints/?api_key=${apiKey}&source=VIIRS_SNPP&area=${bbox}&day_range=${days}`;
+        if (isNaN(lat) || isNaN(lng)) return null;
 
-            console.log(
-                `Fetching NASA FIRMS KML data from: ${url.replace(
-                    apiKey,
-                    '***'
-                )}`
-            );
+        // VIIRS uses bright_ti4, MODIS uses brightness — normalize to one field
+        const brightness = parseFloat(row.bright_ti4 ?? row.brightness);
 
-            const response = await fetch(url);
+        // Build a deterministic sourceId from position + acquisition time
+        // so upserts work correctly across renewals
+        const sourceId = `${row.acq_date}_${row.acq_time}_${lat}_${lng}`;
 
-            if (!response.ok) {
-                throw new Error(
-                    `NASA KML API responded with status: ${response.status}`
-                );
-            }
+        // Parse confidence — VIIRS returns 'l'/'n'/'h', MODIS returns 0-100
+        const confidence = this._parseConfidence(row.confidence);
 
-            const kmlText = await response.text();
-            return this.parseKMLData(kmlText);
-        } catch (error) {
-            console.error('Error fetching NASA FIRMS KML data:', error);
-            throw error;
-        }
+        // Combine date + time into a single Date — acq_date: "2024-01-15", acq_time: "0142"
+        const acquisitionDate = this._parseAcquisitionDate(
+            row.acq_date,
+            row.acq_time
+        );
+
+        return {
+            geometry: {
+                type: 'Point',
+                coordinates: [lng, lat], // GeoJSON: [longitude, latitude]
+            },
+            properties: {
+                sourceId,
+                brightness: isNaN(brightness) ? null : brightness,
+                confidence,
+                satellite: row.satellite ?? null,
+                acquisitionDate,
+                scan: parseFloat(row.scan) || null, // pixel width in km
+                track: parseFloat(row.track) || null, // pixel height in km
+                frp: parseFloat(row.frp) || null, // Fire Radiative Power (MW)
+                daynight: row.daynight ?? null,
+                source: 'NASA_FIRMS',
+            },
+        };
     }
 
-    parseKMLData(kmlText) {
-        // This is a simplified KML parser - you might want to use a proper KML parsing library
-        console.warn('KML parsing not yet implemented, using empty array');
-        return [];
+    _parseConfidence(raw) {
+        if (raw === null || raw === undefined || raw === '') return null;
 
-        // For future implementation, you could use:
-        // const parser = new DOMParser();
-        // const xmlDoc = parser.parseFromString(kmlText, 'text/xml');
-        // Then extract Placemark elements and parse coordinates
+        // VIIRS categorical: 'l' = low (~30), 'n' = nominal (~50), 'h' = high (~80)
+        const categorical = { l: 30, n: 50, h: 80 };
+        if (categorical[raw.toLowerCase()])
+            return categorical[raw.toLowerCase()];
+
+        // MODIS numeric 0-100
+        const numeric = parseInt(raw);
+        return isNaN(numeric) ? null : numeric;
+    }
+
+    _parseAcquisitionDate(dateStr, timeStr) {
+        if (!dateStr) return null;
+
+        // Pad time to 4 digits ("142" → "0142")
+        const time = String(timeStr ?? '0000').padStart(4, '0');
+        const hours = time.slice(0, 2);
+        const minutes = time.slice(2, 4);
+
+        const date = new Date(`${dateStr}T${hours}:${minutes}:00Z`);
+        return isNaN(date.getTime()) ? null : date;
     }
 
     async renewHotspots(area = null, days = 1) {
-        try {
-            // Try CSV first, fall back to KML if needed
-            let nasaHotspots;
-            try {
-                nasaHotspots = await this.fetchHotspots(area, days);
-            } catch (csvError) {
-                console.warn('CSV fetch failed, trying KML:', csvError.message);
-                nasaHotspots = await this.fetchHotspotsKML(area, days);
-            }
+        const targetArea = area || US_BBOX;
+        console.log(
+            `Fetching hotspots from NASA FIRMS (area: ${targetArea}, days: ${days})...`
+        );
 
-            let added = 0,
-                updated = 0,
-                errors = 0;
+        const hotspots = await this.fetchHotspots(targetArea, days);
 
-            for (const hotspot of nasaHotspots) {
-                try {
-                    const existing = await this.model.findOne({
-                        'properties.sourceId': hotspot.properties.sourceId,
-                    });
-
-                    if (existing) {
-                        await this.model.updateOne(
-                            {
-                                'properties.sourceId':
-                                    hotspot.properties.sourceId,
-                            },
-                            {
-                                $set: {
-                                    ...hotspot,
-                                    updatedAt: new Date(),
-                                },
-                            }
-                        );
-                        updated++;
-                    } else {
-                        await this.model.create(hotspot);
-                        added++;
-                    }
-                } catch (error) {
-                    errors++;
-                    console.error(
-                        `Error processing hotspot ${hotspot.properties.sourceId}:`,
-                        error
-                    );
-                }
-            }
-
-            // Clean up old hotspots
-            const cleanupResult = await this.cleanupOldHotspots();
-
-            console.log(
-                `Hotspot renewal complete: ${added} added, ${updated} updated, ${errors} errors, ${cleanupResult.deletedCount} old records cleaned`
-            );
-
-            return {
-                added,
-                updated,
-                errors,
-                cleaned: cleanupResult.deletedCount,
-                totalProcessed: nasaHotspots.length,
-            };
-        } catch (error) {
-            console.error('Error in hotspot renewal process:', error);
-            throw error;
+        if (!hotspots.length) {
+            console.warn('FIRMS returned 0 hotspots — skipping renewal');
+            return { added: 0, updated: 0, total: 0 };
         }
+
+        console.log(`Processing ${hotspots.length} hotspots...`);
+
+        // Upsert by sourceId — avoids duplicates across overlapping renewals
+        const ops = hotspots.map(h => ({
+            updateOne: {
+                filter: { 'properties.sourceId': h.properties.sourceId },
+                update: { $set: h },
+                upsert: true,
+            },
+        }));
+
+        const result = await Hotspot.bulkWrite(ops, { ordered: false });
+
+        const added = result.upsertedCount ?? 0;
+        const updated = result.modifiedCount ?? 0;
+
+        console.log(`Hotspots renewed — added: ${added}, updated: ${updated}`);
+        return { added, updated, total: hotspots.length };
     }
 
     async cleanupOldHotspots(daysThreshold = 7) {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
-
-        const result = await this.model.deleteMany({
-            'properties.acquisitionDate': { $lt: cutoffDate },
+        const cutoff = new Date(
+            Date.now() - daysThreshold * 24 * 60 * 60 * 1000
+        );
+        const result = await Hotspot.deleteMany({
+            'properties.acquisitionDate': { $lt: cutoff },
         });
-
-        if (result.deletedCount > 0) {
-            console.log(
-                `Cleaned up ${result.deletedCount} hotspots older than ${daysThreshold} days`
-            );
-        }
-
+        console.log(
+            `Cleaned up ${result.deletedCount} hotspots older than ${daysThreshold} days`
+        );
         return result;
     }
 
+    // -------------------------------------------------------------------------
+    // CRUD
+    // -------------------------------------------------------------------------
+
     async find(query = {}) {
-        const dbQuery = this.mapQuery(query);
-        let mongooseQuery = this.model.find(dbQuery);
-
-        // Default: most recent first, highest confidence first
-        mongooseQuery = mongooseQuery.sort({
-            'properties.acquisitionDate': -1,
-            'properties.confidence': -1,
-        });
-
-        if (query.limit) {
-            mongooseQuery = mongooseQuery.limit(parseInt(query.limit));
-        }
-
-        if (query.skip) {
-            mongooseQuery = mongooseQuery.skip(parseInt(query.skip));
-        }
-
-        return mongooseQuery.exec();
+        const filter = this.mapQuery(query);
+        return Hotspot.find(filter).lean();
     }
 
     async findOne(sourceId) {
-        return this.model.findOne({ 'properties.sourceId': sourceId });
+        return Hotspot.findOne({ 'properties.sourceId': sourceId }).lean();
     }
 
     async create(hotspotData) {
-        const newHotspot = new this.model(hotspotData);
-        return newHotspot.save();
+        const hotspot = new Hotspot(hotspotData);
+        return hotspot.save();
     }
 
     async update(sourceId, updateData) {
-        return this.model.findOneAndUpdate(
+        return Hotspot.findOneAndUpdate(
             { 'properties.sourceId': sourceId },
-            {
-                $set: {
-                    ...updateData,
-                    updatedAt: new Date(),
-                },
-            },
-            { new: true, runValidators: true }
-        );
+            { $set: updateData },
+            { new: true }
+        ).lean();
     }
 
     async delete(query = {}) {
-        const dbQuery = this.mapQuery(query);
-
-        if (Object.keys(dbQuery).length === 0) {
-            throw new Error('Delete query requires filters');
-        }
-
-        return this.model.deleteMany(dbQuery);
+        const filter = this.mapQuery(query);
+        return Hotspot.deleteMany(filter);
     }
 
-    mapQuery(apiQuery) {
-        const dbQuery = {};
+    async getHotspotStatistics() {
+        const total = await Hotspot.countDocuments();
+        const recent = await Hotspot.countDocuments({
+            'properties.acquisitionDate': {
+                $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            },
+        });
+        const highConfidence = await Hotspot.countDocuments({
+            'properties.confidence': { $gte: 80 },
+        });
 
-        // Field mappings
-        const fieldMap = {
-            sourceId: 'properties.sourceId',
-            satellite: 'properties.satellite',
-            daynight: 'properties.daynight',
-        };
+        return { total, recent, highConfidence };
+    }
 
-        for (const [apiField, dbField] of Object.entries(fieldMap)) {
-            if (apiQuery[apiField] !== undefined) {
-                dbQuery[dbField] = apiQuery[apiField];
-            }
-        }
+    // -------------------------------------------------------------------------
+    // Query mapping — translates API query params to Mongoose filter
+    // -------------------------------------------------------------------------
 
-        // Confidence filter
+    mapQuery(apiQuery = {}) {
+        const filter = {};
+
         if (apiQuery.minConfidence) {
-            dbQuery['properties.confidence'] = {
+            filter['properties.confidence'] = {
                 $gte: parseInt(apiQuery.minConfidence),
             };
         }
 
-        // Brightness filter
         if (apiQuery.minBrightness) {
-            dbQuery['properties.brightness'] = {
+            filter['properties.brightness'] = {
                 $gte: parseFloat(apiQuery.minBrightness),
             };
         }
 
-        // Time-based filters
-        if (apiQuery.minDate) {
-            dbQuery['properties.acquisitionDate'] = {
-                $gte: new Date(apiQuery.minDate),
-            };
+        if (apiQuery.satellite) {
+            filter['properties.satellite'] = apiQuery.satellite;
         }
 
-        if (apiQuery.maxDate) {
-            dbQuery['properties.acquisitionDate'] = {
-                ...dbQuery['properties.acquisitionDate'],
-                $lte: new Date(apiQuery.maxDate),
-            };
-        }
-
-        // Last X hours filter (convenience parameter)
-        if (apiQuery.lastHours) {
+        if (apiQuery.hours) {
             const cutoff = new Date(
-                Date.now() - parseInt(apiQuery.lastHours) * 60 * 60 * 1000
+                Date.now() - parseInt(apiQuery.hours) * 60 * 60 * 1000
             );
-            dbQuery['properties.acquisitionDate'] = {
-                $gte: cutoff,
-            };
+            filter['properties.acquisitionDate'] = { $gte: cutoff };
         }
 
-        return dbQuery;
-    }
-
-    async getHotspotStatistics() {
-        const [total, highConfidence, recent24h] = await Promise.all([
-            this.model.countDocuments(),
-            this.model.countDocuments({
-                'properties.confidence': { $gte: 80 },
-            }),
-            this.model.countDocuments({
-                'properties.acquisitionDate': {
-                    $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                },
-            }),
-        ]);
-
-        return { total, highConfidence, recent24h };
+        return filter;
     }
 }
 
