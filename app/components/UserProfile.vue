@@ -13,9 +13,6 @@
           <img src="https://www.google.com/favicon.ico" class="w-4 h-4" alt="" />
           Continue with Google
         </button>
-        <!-- <button class="btn btn-outline w-full gap-2" @click="signInWithApple">
-          Continue with Apple
-        </button> -->
       </div>
     </div>
 
@@ -75,9 +72,9 @@
             <div class="stat-desc">In database</div>
           </div>
           <div class="stat bg-base-200 rounded-lg">
-            <div class="stat-title">Orphaned Perimeters</div>
-            <div class="stat-value text-warning text-2xl">{{ orphanedPerimetersCount }}</div>
-            <div class="stat-desc">No matching fire</div>
+            <div class="stat-title">IR Hotspots</div>
+            <div class="stat-value text-warning text-2xl">{{ totalHotspots }}</div>
+            <div class="stat-desc">Last 24h: {{ recentHotspots }}</div>
           </div>
         </div>
 
@@ -120,6 +117,10 @@
                   <span class="font-mono">{{ orphanedPercentage }}%</span>
                 </div>
                 <div class="flex justify-between items-center">
+                  <span class="font-medium">Orphaned Perimeters:</span>
+                  <span class="badge badge-warning">{{ orphanedPerimetersCount }}</span>
+                </div>
+                <div class="flex justify-between items-center">
                   <span class="font-medium">Last Updated:</span>
                   <span class="text-sm">{{ statsLastUpdated }}</span>
                 </div>
@@ -130,10 +131,11 @@
 
         <!-- Data Management Actions -->
         <div class="space-y-4">
+
           <div class="card bg-base-200">
             <div class="card-body">
               <h3 class="card-title">Fire Point Data</h3>
-              <p class="text-sm mb-4">Update fire point data from NIFC API</p>
+              <p class="text-sm mb-4">Update fire point data from NIFC</p>
               <button
                 :disabled="fireLoading"
                 class="btn btn-accent w-full md:w-auto"
@@ -155,7 +157,7 @@
           <div class="card bg-base-200">
             <div class="card-body">
               <h3 class="card-title">Fire Perimeters</h3>
-              <p class="text-sm mb-4">Update fire perimeter data from NIFC API</p>
+              <p class="text-sm mb-4">Update fire perimeter data from NIFC</p>
               <button
                 :disabled="perimeterLoading"
                 class="btn btn-accent w-full md:w-auto"
@@ -173,6 +175,29 @@
               </div>
             </div>
           </div>
+
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <h3 class="card-title">IR Hotspot Data</h3>
+              <p class="text-sm mb-4">Fetch latest infrared hotspots from NASA (last 24h, US-wide)</p>
+              <button
+                :disabled="hotspotLoading"
+                class="btn btn-accent w-full md:w-auto"
+                @click="renewHotspots"
+              >
+                {{ hotspotLoading ? 'Updating...' : 'Renew Hotspot Data' }}
+              </button>
+              <div v-if="hotspotResponse" class="mt-3 p-3 bg-success/20 rounded">
+                <p class="text-success font-semibold">Success!</p>
+                <p>Added {{ hotspotResponse.added }} hotspots, updated {{ hotspotResponse.updated }} hotspots ({{ hotspotResponse.total }} total processed).</p>
+              </div>
+              <div v-if="hotspotError" class="mt-3 p-3 bg-error/20 rounded">
+                <p class="text-error font-semibold">Error:</p>
+                <p>{{ hotspotError }}</p>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </template>
@@ -193,6 +218,7 @@ const { loggedIn, user, isAdmin, signInWithGoogle, signOut } = useUser();
 // ---- Data (admin only — only fetched when isAdmin) ----
 const fireData = ref(null);
 const perimeterData = ref(null);
+const hotspotStats = ref(null);
 const statsLastUpdated = ref(null);
 
 // ---- Admin action states ----
@@ -203,6 +229,10 @@ const fireResponse = ref(null);
 const perimeterLoading = ref(false);
 const perimeterError = ref(null);
 const perimeterResponse = ref(null);
+
+const hotspotLoading = ref(false);
+const hotspotError = ref(null);
+const hotspotResponse = ref(null);
 
 // ---- Helpers ----
 function getFiresArray() {
@@ -226,6 +256,9 @@ const activeFiresCount = computed(() =>
 );
 
 const totalPerimeters = computed(() => getPerimetersArray().length);
+
+const totalHotspots = computed(() => hotspotStats.value?.total ?? '—');
+const recentHotspots = computed(() => hotspotStats.value?.recent ?? '—');
 
 const prescribedFiresCount = computed(() =>
   getFiresArray().filter(f =>
@@ -266,12 +299,14 @@ const orphanedPercentage = computed(() => {
 
 // ---- Data fetching (admin only) ----
 async function fetchAdminData() {
-  const [firesRes, perimetersRes] = await Promise.all([
+  const [firesRes, perimetersRes, hotspotRes] = await Promise.all([
     $fetch('/api/map-data'),
     $fetch('/api/perimeter'),
+    $fetch('/api/hotspots/stats'),
   ]);
   fireData.value = firesRes;
   perimeterData.value = perimetersRes;
+  hotspotStats.value = hotspotRes?.data ?? null;
   statsLastUpdated.value = new Date().toLocaleString();
 }
 
@@ -308,6 +343,24 @@ async function renewPerimeters() {
     perimeterError.value = err?.data?.statusMessage || err.message || 'Unknown error';
   } finally {
     perimeterLoading.value = false;
+  }
+}
+
+async function renewHotspots() {
+  hotspotLoading.value = true;
+  hotspotError.value = null;
+  hotspotResponse.value = null;
+  try {
+    const res = await $fetch('/api/hotspots', {
+      method: 'POST',
+      body: { action: 'renew' },
+    });
+    hotspotResponse.value = res.data;
+    await fetchAdminData();
+  } catch (err) {
+    hotspotError.value = err?.data?.statusMessage || err.message || 'Unknown error';
+  } finally {
+    hotspotLoading.value = false;
   }
 }
 

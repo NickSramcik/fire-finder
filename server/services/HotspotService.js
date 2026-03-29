@@ -1,33 +1,16 @@
 import { parse } from 'csv-parse/sync';
 import Hotspot from '../models/Hotspot.js';
 
-// US bounding box for NASA area queries
+// US bounding box for area queries
 const US_BBOX = '-125,24,-65,50';
-
-// NASA CSV column headers vary slightly by source — normalize them here
-const COLUMN_MAP = {
-    latitude: 'latitude',
-    longitude: 'longitude',
-    brightness: 'brightness', // MODIS: brightness (Kelvin), VIIRS: bright_ti4
-    bright_ti4: 'brightness', // VIIRS brightness alias
-    scan: 'scan',
-    track: 'track',
-    acq_date: 'acq_date',
-    acq_time: 'acq_time',
-    satellite: 'satellite',
-    instrument: 'instrument',
-    confidence: 'confidence',
-    frp: 'frp',
-    daynight: 'daynight',
-};
 
 export class HotspotService {
     constructor() {
-        this.baseUrl = 'https://FIRMS.modaps.eosdis.nasa.gov/api/area/csv';
+        this.baseUrl = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv';
     }
 
     // Read lazily so Nuxt runtime config is fully initialized before first use
-    get NASAKey() {
+    get nasaKey() {
         const key = process.env.NASA_KEY;
         if (!key)
             throw new Error('NASA_KEY environment variable is not set');
@@ -61,10 +44,10 @@ export class HotspotService {
     }
 
     async _fetchSource(source, area, days) {
-        const url = `${this.baseUrl}/${this.NASAKey}/${source}/${area}/${days}`;
+        const url = `${this.baseUrl}/${this.nasaKey}/${source}/${area}/${days}`;
 
         const response = await fetch(url, {
-            signal: AbortSignal.timeout(30000), // 30s timeout
+            signal: AbortSignal.timeout(30000),
         });
 
         if (!response.ok) {
@@ -73,13 +56,10 @@ export class HotspotService {
 
         const csvText = await response.text();
 
-        // NASA returns a plain "Invalid key" or similar string on auth failure
+        // NASA returns a plain error string on auth failure rather than HTTP 4xx
         if (!csvText.startsWith('latitude') && !csvText.startsWith('lon')) {
             throw new Error(
-                `Unexpected NASA response for ${source}: ${csvText.slice(
-                    0,
-                    100
-                )}`
+                `Unexpected NASA response for ${source}: ${csvText.slice(0, 100)}`
             );
         }
 
@@ -88,7 +68,7 @@ export class HotspotService {
 
     parseCSVData(csvText) {
         const rows = parse(csvText, {
-            columns: true, // use first row as headers
+            columns: true,
             skip_empty_lines: true,
             trim: true,
         });
@@ -100,7 +80,7 @@ export class HotspotService {
                 const hotspot = this._rowToHotspot(row);
                 if (hotspot) hotspots.push(hotspot);
             } catch (err) {
-                // Skip malformed rows silently — NASA data can have gaps
+                // Skip malformed rows — NASA data can have gaps
                 console.warn('Skipping malformed NASA row:', err.message);
             }
         }
@@ -117,14 +97,14 @@ export class HotspotService {
         // VIIRS uses bright_ti4, MODIS uses brightness — normalize to one field
         const brightness = parseFloat(row.bright_ti4 ?? row.brightness);
 
-        // Build a deterministic sourceId from position + acquisition time
-        // so upserts work correctly across renewals
+        // Deterministic sourceId from position + acquisition time
+        // ensures upserts work correctly across overlapping renewals
         const sourceId = `${row.acq_date}_${row.acq_time}_${lat}_${lng}`;
 
-        // Parse confidence — VIIRS returns 'l'/'n'/'h', MODIS returns 0-100
+        // VIIRS returns 'l'/'n'/'h', MODIS returns 0-100
         const confidence = this._parseConfidence(row.confidence);
 
-        // Combine date + time into a single Date — acq_date: "2024-01-15", acq_time: "0142"
+        // acq_date: "2024-01-15", acq_time: "0142"
         const acquisitionDate = this._parseAcquisitionDate(
             row.acq_date,
             row.acq_time
@@ -141,11 +121,11 @@ export class HotspotService {
                 confidence,
                 satellite: row.satellite ?? null,
                 acquisitionDate,
-                scan: parseFloat(row.scan) || null, // pixel width in km
-                track: parseFloat(row.track) || null, // pixel height in km
-                frp: parseFloat(row.frp) || null, // Fire Radiative Power (MW)
+                scan: parseFloat(row.scan) || null,
+                track: parseFloat(row.track) || null,
+                frp: parseFloat(row.frp) || null,
                 daynight: row.daynight ?? null,
-                source: 'NASA_NASA',
+                source: 'NASA',
             },
         };
     }
@@ -178,7 +158,7 @@ export class HotspotService {
     async renewHotspots(area = null, days = 1) {
         const targetArea = area || US_BBOX;
         console.log(
-            `Fetching hotspots from NASA NASA (area: ${targetArea}, days: ${days})...`
+            `Fetching hotspots from NASA (area: ${targetArea}, days: ${days})...`
         );
 
         const hotspots = await this.fetchHotspots(targetArea, days);
