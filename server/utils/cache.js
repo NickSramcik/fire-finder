@@ -23,8 +23,15 @@ class FireCache {
         return item.value;
     }
 
+    // Accepts a string key or a RegExp to delete all matching keys
     delete(key) {
-        this.cache.delete(key);
+        if (key instanceof RegExp) {
+            for (const k of this.cache.keys()) {
+                if (key.test(k)) this.cache.delete(k);
+            }
+        } else {
+            this.cache.delete(key);
+        }
     }
 }
 

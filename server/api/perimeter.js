@@ -26,7 +26,7 @@ export default defineEventHandler(async event => {
             const body = await readBody(event);
 
             if (!body.sourceId) {
-                return createError({
+                throw createError({
                     statusCode: 400,
                     statusMessage: 'sourceId is required',
                 });
@@ -41,7 +41,7 @@ export default defineEventHandler(async event => {
 
         if (event.method === 'DELETE') {
             if (Object.keys(queryParams).length === 0) {
-                return createError({
+                throw createError({
                     statusCode: 400,
                     statusMessage:
                         'At least one filter parameter is required for deletion',
@@ -55,13 +55,16 @@ export default defineEventHandler(async event => {
             };
         }
 
-        return createError({
+        throw createError({
             statusCode: 405,
             statusMessage: 'Method Not Allowed',
         });
     } catch (error) {
+        // Re-throw H3 errors (createError) so Nitro handles them correctly
+        if (error.statusCode) throw error;
+
         console.error('Error in perimeters API:', error);
-        return createError({
+        throw createError({
             statusCode: 500,
             statusMessage: 'Internal Server Error',
             data: error.message,
